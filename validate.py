@@ -173,7 +173,7 @@ def run(D, now=None, live=True, config=None, sample_seed="0"):
     def issuer():
         i = config.get("issuer") or {}
         ok = bool(i.get("name") and i.get("contact"))
-        return ok, (f"{i.get('name')}, {i.get('role', '')}, {i.get('contact')}" if ok
+        return ok, (", ".join(x for x in (i.get("name"), i.get("role"), i.get("contact")) if x) if ok
                     else "no issuer (name and contact) in config.json, so readers can't report errors")
     C.run("F05", "freshness", "Issuer named", issuer)
 
