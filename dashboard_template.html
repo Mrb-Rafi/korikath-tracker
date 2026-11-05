@@ -1,0 +1,2831 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Korikath Tracker</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --surface: #ffffff; --surface-2: #f0eee8; --border: #e2dfd6;
+    --text: #1d1c1a; --muted: #6b675f; --accent: #2f6b4f; --accent-soft: #e3efe8;
+    --danger: #a33a2b; --danger-soft: #f7e4e0; --warn: #8a5a00; --warn-soft: #f8edd5;
+    --info: #2d5a8c; --info-soft: #e1ebf6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151514; --surface: #1e1e1c; --surface-2: #262623; --border: #34332f;
+      --text: #ecebe6; --muted: #9c988e; --accent: #7cc4a0; --accent-soft: #1f3329;
+      --danger: #f08f80; --danger-soft: #3a211d; --warn: #e4b55c; --warn-soft: #362b17;
+      --info: #8db8e8; --info-soft: #1c2a3a;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--info); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 20px; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 18px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .cause { font-weight: 600; }
+  .cause.bad { color: var(--danger); }
+  select, input[type=search] { font: inherit; color: var(--text); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .kpi .label { color: var(--muted); font-size: 13px; }
+  .kpi .value { font-size: 30px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .kpi .delta { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .up { color: var(--accent); } .down { color: var(--danger); } .flat { color: var(--muted); }
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .count { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .count.bad { background: var(--danger-soft); color: var(--danger); }
+  .count.good { background: var(--accent-soft); color: var(--accent); }
+  .empty { color: var(--muted); font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); display: flex; flex-direction: column; }
+  .thumb { aspect-ratio: 4/3; background: var(--surface-2); display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 12px; overflow: hidden; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .body { padding: 10px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+  .card .name { font-weight: 600; word-break: break-word; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em;
+    padding: 2px 7px; border-radius: 6px; }
+  .badge.deleted { background: var(--danger-soft); color: var(--danger); }
+  .badge.moved_out { background: var(--warn-soft); color: var(--warn); }
+  .badge.added { background: var(--accent-soft); color: var(--accent); }
+  .kv { color: var(--muted); }
+  .kv b { color: var(--text); font-weight: 500; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font-size: 12px; background: var(--surface-2); border-radius: 6px; padding: 1px 6px; }
+  .chip.minus { background: var(--danger-soft); } .chip.plus { background: var(--accent-soft); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .scroll { overflow-x: auto; }
+  details > summary { cursor: pointer; color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .tree ul { list-style: none; margin: 0; padding-left: 18px; border-left: 1px dashed var(--border); }
+  .tree > ul { padding-left: 0; border: 0; }
+  .tree li { margin: 2px 0; }
+  .node { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .toggle { cursor: pointer; user-select: none; width: 14px; color: var(--muted); display: inline-block; }
+  .tree .n { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tree .hl > .node a { background: var(--warn-soft); }
+  .spark { width: 100%; height: 60px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .status { display: flex; gap: 12px; align-items: flex-start; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px; }
+  .status.running { background: var(--accent-soft); }
+  .status.stalled { background: var(--warn-soft); }
+  .status.failed { background: var(--danger-soft); }
+  .status b { font-weight: 650; }
+  .status > div { flex: 1; min-width: 0; }
+  .status .progress { height: 8px; border-radius: 4px; background: var(--surface); margin: 8px 0 6px; overflow: hidden; }
+  .status .progress span { display: block; height: 100%; background: var(--accent); border-radius: 4px; transition: width .6s ease; }
+  .status .eta { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .status .small { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .pulse { flex: none; width: 12px; height: 12px; margin-top: 5px; border-radius: 50%; background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
+  .status.stalled .pulse, .status.failed .pulse { animation: none; background: var(--warn); }
+  .status.failed .pulse { background: var(--danger); }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { font: inherit; font-size: 13px; padding: 5px 12px; border: 0; background: var(--surface); color: var(--muted); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .crumbs { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .crumbs button { font: inherit; background: none; border: 0; padding: 0; color: var(--info); cursor: pointer; }
+  .crumbs button:hover { text-decoration: underline; }
+  .sb-wrap { display: grid; grid-template-columns: minmax(0, 640px) minmax(220px, 1fr); gap: 20px; align-items: start; }
+  .sb svg { width: 100%; height: auto; display: block; }
+  .sb path { stroke: var(--surface); stroke-width: 0.6px; }
+  .sb text { fill: #1b1b1b; font-size: 10px; }
+  .sb .center-title { fill: var(--text); font-size: 13px; font-weight: 650; }
+  .sb .center-sub { fill: var(--muted); font-size: 11px; }
+  .sb-info { background: var(--surface-2); border-radius: 10px; padding: 14px; font-size: 13px; min-height: 140px; }
+  .sb-info .t { font-size: 15px; font-weight: 650; margin-bottom: 8px; word-break: break-word; }
+  .sb-info dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
+  .sb-info dt { color: var(--muted); }
+  .sb-info dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .sb-info .hint { color: var(--muted); margin-top: 10px; }
+  .sb-info .bar { height: 6px; border-radius: 3px; background: var(--border); margin-top: 3px; overflow: hidden; }
+  .sb-info .bar span { display: block; height: 100%; }
+  @media (max-width: 820px) { .sb-wrap { grid-template-columns: 1fr; } }
+  .btn { font: inherit; font-size: 13px; padding: 5px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--text); cursor: pointer; }
+  .btn:hover { background: var(--surface-2); }
+  .dendro { overflow: auto; max-height: 80vh; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+  .dendro svg { display: block; font-size: 15px; }
+  .dendro .node text.label { fill: var(--text); font-weight: 500; paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+  .dendro .node text.label .n { font-size: 13px; font-weight: 400; }
+  .dendro .node:hover text.label { text-decoration: underline; }
+  .dendro .ext { fill: var(--info); font-size: 14px; cursor: pointer; }
+  .dendro .ext:hover { font-weight: 700; }
+  h3 { font-size: 15px; margin: 20px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .crawl-actions .btn { font-size: 14px; padding: 8px 16px; margin: 0 6px 6px 0; }
+  .crawl-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; }
+  .crawl-schedule { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; }
+  .crawl-schedule .item { margin-bottom: 8px; }
+  .crawl-schedule .item:last-child { margin-bottom: 0; }
+  .crawl-schedule b { color: var(--text); font-weight: 600; }
+  @media (max-width: 720px) { .crawl-grid { grid-template-columns: 1fr; } }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; overflow-x: auto; overflow-y: hidden; }
+  .tabs button { font: inherit; font-size: 14px; padding: 8px 14px; border: 0; border-bottom: 2px solid transparent;
+    background: none; color: var(--muted); cursor: pointer; margin-bottom: -1px; white-space: nowrap; }
+  .tabs button:hover { color: var(--text); }
+  .tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px 6px 0 0; }
+  .page-title { font-size: 22px; margin: 0 0 14px; }
+  .page-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .page-head .page-title { margin: 0; }
+  a.btn { display: inline-block; text-decoration: none; }
+  .back { font-weight: 600; }
+  .nav-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .nav-card { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: 12px; text-decoration: none;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text); transition: border-color .15s, box-shadow .15s; }
+  .nav-card:hover { text-decoration: none; border-color: var(--accent); box-shadow: 0 1px 0 var(--accent); }
+  .nav-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .nc-title { font-size: 17px; font-weight: 650; color: var(--accent); }
+  .nc-sub { font-size: 13px; color: var(--muted); }
+  .mini { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px;
+    font-size: 14px; color: var(--text); text-decoration: none; }
+  .mini:hover { text-decoration: none; filter: brightness(0.98); }
+  .mini.running { background: var(--accent-soft); }
+  .mini.stalled { background: var(--warn-soft); }
+  .mini.failed { background: var(--danger-soft); }
+  .mini .pulse { margin-top: 0; }
+  .mini.stalled .pulse { animation: none; background: var(--warn); }
+  .mini.failed .pulse { animation: none; background: var(--danger); }
+  .growth { position: relative; width: 100%; min-height: 120px; }
+  .growth svg { display: block; width: 100%; font-size: 12px; }
+  .growth .axis text { fill: var(--muted); }
+  .growth .axis line, .growth .axis path { stroke: var(--border); }
+  .growth .grid line { stroke: var(--border); stroke-opacity: .7; }
+  .growth .grid path { display: none; }
+  .growth-readout { font-size: 14px; font-variant-numeric: tabular-nums; }
+  .growth-readout b { font-weight: 650; }
+  .two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 0 16px; }
+  @media (max-width: 520px) { .two-col { grid-template-columns: 1fr; } }
+  .barcell { min-width: 120px; }
+  .bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; margin-top: 4px; }
+  .bar span { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+  .pct { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+  .badge.removed { background: var(--danger-soft); color: var(--danger); }
+  .usage-pages { margin: 0; padding-left: 16px; font-size: 12px; }
+  .more-btn { margin-top: 8px; }
+  /* Inline, with the arrow glued to the last word, so a heading that wraps keeps its arrow next to it. */
+  th button.sort { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer;
+    display: inline; text-align: inherit; }
+  th[aria-sort="ascending"], th[aria-sort="descending"], td.sorted { background: var(--surface-2); }
+  th button.sort:hover { color: var(--text); }
+  th button.sort.on { color: var(--accent); }
+  th button.sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  th .arrow { font-size: 10px; opacity: .55; }
+  th button.sort.on .arrow { opacity: 1; }
+  .linkbtn { font: inherit; background: none; border: 0; padding: 0; color: var(--info); cursor: pointer; text-align: left; }
+  .linkbtn:hover { text-decoration: underline; }
+  .person-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 14px 0 12px; }
+  .person-head .pname { font-size: 20px; font-weight: 650; }
+  .person-links { font-size: 13px; }
+  .report-dl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+  .report-dl .report-msg:empty { display: none; }
+  .kpis.small .kpi { padding: 10px 14px; }
+  .kpis.small .kpi .value { font-size: 22px; }
+  .alert { background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+    border-left: 5px solid var(--danger); border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; }
+  .alert h2 { color: var(--danger); font-size: 17px; margin: 0 0 4px; }
+  .alert .when { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  .alert .group { margin-top: 10px; }
+  .alert .group-title { font-weight: 650; color: var(--danger); }
+  .alert ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; }
+  .alert li { margin: 2px 0; }
+  .alert .more { font-size: 13px; font-weight: 600; }
+  .all-clear { display: flex; align-items: center; gap: 8px; color: var(--accent); background: var(--accent-soft);
+    border-radius: 10px; padding: 8px 14px; margin-bottom: 16px; font-size: 14px; }
+  section.removal { border-left: 5px solid var(--danger); }
+  section.removal > h2 { color: var(--danger); }
+  .trio { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+  .trio span { display: inline-flex; flex-direction: column; line-height: 1.1; }
+  .trio small { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .map { height: 560px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); }
+  @media (max-width: 520px) { .map { height: 420px; } }
+  .map-pop { width: 220px; font-size: 13px; }
+  .map-pop img { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; display: block; margin-bottom: 6px; background: var(--surface-2); }
+  .dl-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; background: var(--surface-2);
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 14px; }
+  .dl-panel input[type=date] { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px 8px; }
+  .dl-panel label { display: inline-flex; align-items: center; gap: 6px; }
+  .uf-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+  .uf-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  .uf-form label.chk { flex-direction: row; align-items: center; gap: 6px; padding-bottom: 7px; color: var(--text); }
+  .uf-form .grow { flex: 1 1 280px; min-width: 0; }
+  .uf-form .grow input { width: 100%; }
+  .notice { background: var(--info-soft); color: var(--text); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px; }
+  @media (max-width: 520px) { .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } .kpi .value { font-size: 24px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="title">Project Korikath tracker</h1>
+      <div class="sub" id="subtitle"></div>
+    </div>
+    <a class="btn back" href="#/" id="navBack" hidden>← Overview</a>
+    <div class="report-dl" id="projectReport">
+      <button type="button" class="btn" data-report="">Download PDF report</button>
+      <span class="sub report-msg" aria-live="polite"></span>
+    </div>
+  </header>
+
+  <!-- Home: statistics, links to the other pages, category tree -->
+  <div id="page-home">
+    <div class="kpis" id="kpis"></div>
+    <div id="alerts"></div>
+    <div id="miniStatus" aria-live="polite"></div>
+    <div class="nav-cards">
+      <a class="nav-card" href="#/changes">
+        <span class="nc-title">Explore changes <span aria-hidden="true">→</span></span>
+        <span class="nc-sub" id="ncChanges"></span>
+      </a>
+      <a class="nav-card" href="#/usage">
+        <span class="nc-title">On-wiki usage <span aria-hidden="true">→</span></span>
+        <span class="nc-sub" id="ncUsage"></span>
+      </a>
+      <a class="nav-card" href="#/views">
+        <span class="nc-title">Views <span aria-hidden="true">→</span></span>
+        <span class="nc-sub" id="ncViews"></span>
+      </a>
+      <a class="nav-card" href="#/places">
+        <span class="nc-title">Map, devices &amp; metadata <span aria-hidden="true">→</span></span>
+        <span class="nc-sub" id="ncPlaces"></span>
+      </a>
+      <a class="nav-card" href="#/contributors">
+        <span class="nc-title">Contributors <span aria-hidden="true">→</span></span>
+        <span class="nc-sub" id="ncContrib"></span>
+      </a>
+      <a class="nav-card" href="#/user-files">
+        <span class="nc-title">Files by contributor in a category <span aria-hidden="true">→</span></span>
+        <span class="nc-sub">Pick a category and a name: that person's files there, with the total</span>
+      </a>
+      <a class="nav-card" href="#/crawls">
+        <span class="nc-title">Crawls <span aria-hidden="true">→</span></span>
+        <span class="nc-sub" id="ncCrawls"></span>
+      </a>
+    </div>
+    <section>
+      <h2>Korikath media over time</h2>
+      <div class="row">
+        <div class="seg" role="radiogroup" aria-label="Chart view" id="growthSeg">
+          <button type="button" data-view="total" aria-pressed="true">Total files</button>
+          <button type="button" data-view="monthly" aria-pressed="false">Uploads per month</button>
+          <button type="button" data-view="assessed" aria-pressed="false" id="viewAssessed">Quality, featured &amp; valued</button>
+          <button type="button" data-view="size" aria-pressed="false" id="viewSize">Collection size</button>
+        </div>
+        <span class="growth-readout" id="growthReadout" aria-live="polite"></span>
+      </div>
+      <div id="growthChart" class="growth"></div>
+      <p class="sub" id="growthNote" style="margin:10px 0 0"></p>
+    </section>
+    <section>
+    <h2>Explore Korikath Category Tree <span class="count" id="treeCount"></span></h2>
+    <div class="tabs" role="tablist" aria-label="Category tree views">
+      <button type="button" role="tab" id="tab-map" aria-controls="panel-map" aria-selected="true">Tree map</button>
+      <button type="button" role="tab" id="tab-diagram" aria-controls="panel-diagram" aria-selected="false" tabindex="-1">Tree diagram</button>
+      <button type="button" role="tab" id="tab-list" aria-controls="panel-list" aria-selected="false" tabindex="-1">List</button>
+    </div>
+    <div role="tabpanel" id="panel-map" aria-labelledby="tab-map">
+    <div class="row">
+      <span class="sub">Size by</span>
+      <div class="seg" role="radiogroup" aria-label="Size slices by">
+        <button type="button" data-mode="files" aria-pressed="true">Files</button>
+        <button type="button" data-mode="subcats" aria-pressed="false">Subcategories</button>
+      </div>
+      <nav class="crumbs" id="crumbs" aria-label="Zoom path"></nav>
+    </div>
+    <div class="sb-wrap">
+      <div id="sunburst" class="sb"></div>
+      <aside class="sb-info" id="sbInfo"></aside>
+    </div>
+    <p class="sub" id="sbHelp" style="margin:12px 0 0">The mother category is in the centre and each ring is one level deeper. Click a slice to zoom into
+      that cluster; click the centre to go back up. Each slice is drawn under the category the tracker found it through first;
+      a category or file filed in several places is counted in each, so slice sizes can add up to more than the unique total.</p>
+    </div>
+    <div role="tabpanel" id="panel-diagram" aria-labelledby="tab-diagram" hidden>
+    <div class="row">
+      <button type="button" class="btn" id="dendroExpand">Expand all</button>
+      <button type="button" class="btn" id="dendroCollapse">Collapse all</button>
+      <span class="sub">Click a circle or name to open or close it · ↗ opens the category on Commons · bigger circle = more files · biggest branches first</span>
+    </div>
+    <div id="dendro" class="dendro"></div>
+    </div>
+    <div role="tabpanel" id="panel-list" aria-labelledby="tab-list" hidden>
+    <div class="row"><input type="search" id="treeSearch" placeholder="Filter categories…" style="flex:1;min-width:200px"></div>
+    <div class="tree" id="tree"></div>
+    </div>
+    </section>
+  </div>
+
+  <!-- Crawls: start a crawl, live progress, schedule, saved crawls -->
+  <div id="page-crawls" hidden>
+    <h2 class="page-title">Crawls</h2>
+    <section>
+      <div id="status" aria-live="polite"></div>
+      <div class="crawl-grid">
+        <div class="crawl-actions">
+          <button type="button" class="btn primary" id="startQuick" data-mode="quick">Start quick check</button>
+          <button type="button" class="btn" id="startFull" data-mode="full">Start full crawl</button>
+          <button type="button" class="btn" id="startUsage" data-mode="usage">Check on-wiki usage</button>
+          <p class="sub" style="margin:8px 0 0"><b>Quick check</b> (about 3 min) reads only what changed since the last crawl.
+            <b>Full crawl</b> (about 13 min) re-reads every category and also catches renamed files.
+            <b>On-wiki usage</b> (about 20 min) checks every file's use on other Wikimedia wikis.
+            Either runs in the background: you can close this page and it keeps going.</p>
+          <p class="sub" id="crawlMsg" role="status" style="margin:6px 0 0"></p>
+        </div>
+        <div class="crawl-schedule">
+          <div class="sub" style="font-weight:600;margin-bottom:6px">Scheduled crawls</div>
+          <div id="schedule" class="sub">…</div>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Saved crawls <span class="count" id="savedCount"></span></h2>
+      <svg class="spark" id="spark" preserveAspectRatio="none"></svg>
+      <div class="scroll"><table id="historyTable"></table></div>
+    </section>
+  </div>
+
+  <!-- Views: how often Korikath files are loaded -->
+  <div id="page-views" hidden>
+    <h2 class="page-title">Views</h2>
+    <p class="sub" id="viewsMeta" style="margin:-6px 0 14px"></p>
+    <div id="viewsLive" aria-live="polite"></div>
+    <div id="viewsEmpty"></div>
+    <div id="viewsBody">
+      <div class="kpis" id="viewsKpis"></div>
+      <section>
+        <h2>Views over time</h2>
+        <div class="row">
+          <div class="seg" role="radiogroup" aria-label="Chart view" id="viewsMonthSeg">
+            <button type="button" data-view="monthly" aria-pressed="true">Per month</button>
+            <button type="button" data-view="total" aria-pressed="false">All-time total</button>
+          </div>
+          <span class="growth-readout" id="viewsMonthReadout" aria-live="polite"></span>
+        </div>
+        <div id="viewsMonthChart" class="growth"></div>
+        <p class="sub" style="margin:10px 0 0" id="viewsMonthNote"></p>
+      </section>
+      <section id="viewsDaySection">
+        <h2>Views by day</h2>
+        <div class="row"><span class="growth-readout" id="viewsDayReadout" aria-live="polite"></span></div>
+        <div id="viewsDayChart" class="growth"></div>
+        <p class="sub" style="margin:10px 0 0" id="viewsDayNote"></p>
+      </section>
+      <section>
+        <h2>Most viewed files</h2>
+        <div class="grid" id="viewsFiles"></div>
+      </section>
+      <div class="two-col">
+        <section>
+          <h2>Most viewed categories</h2>
+          <div class="scroll"><table id="viewsCats"></table></div>
+        </section>
+        <section>
+          <h2>Most viewed contributors</h2>
+          <div class="scroll"><table id="viewsUsers"></table></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map & devices: where files were taken, and with what -->
+  <div id="page-places" hidden>
+    <h2 class="page-title">Map, devices &amp; metadata</h2>
+    <p class="sub" id="placesMeta" style="margin:-6px 0 14px"></p>
+    <div id="placesEmpty"></div>
+    <div id="placesBody">
+      <div class="kpis" id="placesKpis"></div>
+      <section>
+        <h2>Map of geocoded files <span class="count" id="mapCount"></span></h2>
+        <p class="sub" style="margin:-6px 0 10px">The camera location recorded on each file's Commons page. Zoom in to split the
+          clusters; click a pin for the photo. Map © OpenStreetMap contributors.</p>
+        <div id="map" class="map" role="region" aria-label="Map of geocoded Korikath files"></div>
+      </section>
+      <section>
+        <h2>Devices</h2>
+        <p class="sub" style="margin:-6px 0 10px" id="devicesMeta"></p>
+        <div class="kpis small" id="devicesKpis"></div>
+        <div class="two-col">
+          <div><h3>By type</h3><div class="scroll"><table id="devTypes"></table></div></div>
+          <div><h3>By brand</h3><div class="scroll"><table id="devBrands"></table></div></div>
+        </div>
+        <h3>By model <span class="count" id="devModelCount"></span></h3>
+        <div class="row"><input type="search" id="devFilter" placeholder="Filter models…" style="flex:1;min-width:200px"></div>
+        <div class="scroll"><table id="devModels"></table></div>
+      </section>
+      <section id="gapSection">
+        <h2>From shot to upload</h2>
+        <p class="sub" style="margin:-6px 0 10px" id="gapMeta"></p>
+        <div class="kpis small" id="gapKpis"></div>
+        <div class="two-col">
+          <div><h3>How long photos waited</h3><div class="scroll"><table id="gapGroups"></table></div></div>
+          <div><h3>Typical wait by upload year</h3><div class="scroll"><table id="gapYears"></table></div></div>
+        </div>
+        <h3>Longest waits</h3>
+        <div class="scroll"><table id="gapLongest"></table></div>
+      </section>
+      <section id="sizeSection">
+        <h2>Collection size</h2>
+        <p class="sub" style="margin:-6px 0 10px" id="sizeMeta"></p>
+        <div class="kpis small" id="sizeKpis"></div>
+        <div class="two-col">
+          <div><h3>By kind of file</h3><div class="scroll"><table id="sizeKinds"></table></div></div>
+          <div><h3>Largest files</h3><div class="scroll"><table id="sizeLargest"></table></div></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Contributors: who uploaded the files now in the project -->
+  <div id="page-contributors" hidden>
+    <h2 class="page-title">Contributors</h2>
+    <p class="sub" id="contribMeta" style="margin:-6px 0 14px"></p>
+    <div class="kpis" id="contribKpis"></div>
+    <section>
+      <h2>Contributors over time</h2>
+      <div class="row">
+        <div class="seg" role="radiogroup" aria-label="Chart view" id="contribView">
+          <button type="button" data-view="total" aria-pressed="true">Total contributors</button>
+          <button type="button" data-view="active" aria-pressed="false">Active per month</button>
+          <button type="button" data-view="new" aria-pressed="false">New per month</button>
+        </div>
+        <span class="growth-readout" id="contribReadout" aria-live="polite"></span>
+      </div>
+      <div id="contribChart" class="growth"></div>
+    </section>
+    <section>
+      <h2>How much people upload</h2>
+      <div class="scroll"><table id="contribBuckets"></table></div>
+    </section>
+    <section id="personSection">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Contributor</h2>
+        <div class="row" style="margin:0">
+          <label class="sub" for="personPick">Show</label>
+          <input type="search" id="personPick" list="contribNames" placeholder="Type a contributor's name…" style="min-width:240px">
+          <datalist id="contribNames"></datalist>
+        </div>
+      </div>
+      <div id="person"></div>
+    </section>
+    <section>
+      <h2>All contributors <span class="count" id="contribCount"></span></h2>
+      <div class="row"><input type="search" id="contribFilter" placeholder="Filter by name…" style="flex:1;min-width:200px"></div>
+      <div class="scroll"><table id="contribTable"></table></div>
+    </section>
+  </div>
+
+  <!-- Files by contributor: one person's files in one category, worked out by the local server -->
+  <div id="page-userfiles" hidden>
+    <h2 class="page-title">Files by contributor in a category</h2>
+    <p class="sub" id="ufMeta" style="margin:-6px 0 14px"></p>
+    <section>
+      <form id="ufForm" class="uf-form">
+        <label class="grow">Category
+          <input type="search" id="ufCat" list="ufCats" placeholder="e.g. Project Korikath-Bangladesh" autocomplete="off" required>
+        </label>
+        <datalist id="ufCats"></datalist>
+        <label class="grow">Contributor (user name)
+          <input type="search" id="ufUser" list="ufNames" placeholder="Leave empty to see everyone in the category" autocomplete="off">
+        </label>
+        <datalist id="ufNames"></datalist>
+        <label class="chk"><input type="checkbox" id="ufSub" checked> Include subcategories</label>
+        <button type="submit" class="btn primary">Show files</button>
+      </form>
+    </section>
+    <div id="ufResult" aria-live="polite"></div>
+  </div>
+
+  <!-- On-wiki usage: where Korikath files are used on other Wikimedia wikis -->
+  <div id="page-usage" hidden>
+    <div class="page-head">
+      <h2 class="page-title">On-wiki usage</h2>
+      <div class="seg" role="radiogroup" aria-label="Which pages to count" id="usageSeg">
+        <button type="button" data-scope="all" aria-pressed="true">All pages</button>
+        <button type="button" data-scope="content" aria-pressed="false">Articles only</button>
+      </div>
+    </div>
+    <p class="sub" id="usageMeta" style="margin:-6px 0 14px"></p>
+    <div id="usageEmpty"></div>
+    <div id="usageBody">
+      <div class="kpis" id="usageKpis"></div>
+      <section>
+        <h2>Usage changes <span class="count" id="usageChangeCount"></span></h2>
+        <div id="usageDl"></div>
+        <div class="row">
+          <a class="btn" href="usage_current.csv" download="korikath_usage_current.csv">Download current usage (CSV)</a>
+          <div class="seg" role="radiogroup" aria-label="Show changes" id="changeFilter">
+            <button type="button" data-f="all" aria-pressed="true">All</button>
+            <button type="button" data-f="added" aria-pressed="false">Added</button>
+            <button type="button" data-f="removed" aria-pressed="false">Removed</button>
+          </div>
+        </div>
+        <div class="scroll"><table id="usageChanges"></table></div>
+      </section>
+      <div class="two-col">
+        <section>
+          <h2>Wikis using Korikath files</h2>
+          <div class="scroll"><table id="usageWikis"></table></div>
+        </section>
+        <section>
+          <h2>Uploaders whose files are used</h2>
+          <div class="scroll"><table id="usageUploaders"></table></div>
+        </section>
+      </div>
+      <section id="mainPageSection" hidden>
+        <h2>Main page features <span class="count" id="mainPageCount"></span></h2>
+        <p class="sub" style="margin:-6px 0 10px" id="mainPageNote"></p>
+        <div class="kpis small" id="mainPageKpis"></div>
+        <p id="mainPageWikiList" style="margin:4px 0 14px;line-height:1.7"></p>
+        <div class="scroll"><table id="mainPageFiles"></table></div>
+        <h3>By wiki</h3>
+        <div class="scroll"><table id="mainPageWikis"></table></div>
+      </section>
+      <section>
+        <h2>Most used categories</h2>
+        <p class="sub" style="margin:-6px 0 10px">Counts the unique files anywhere below each category in the tree.</p>
+        <div class="scroll"><table id="usageCats"></table></div>
+      </section>
+      <section>
+        <div class="row" style="justify-content:space-between">
+          <h2 style="margin:0">Most used files</h2>
+          <div class="row" style="margin:0">
+            <span class="sub">Sort by</span>
+            <div class="seg" role="radiogroup" aria-label="Sort files by" id="fileSort">
+              <button type="button" data-sort="uses" aria-pressed="true">Most pages</button>
+              <button type="button" data-sort="wikis" aria-pressed="false">Most wikis</button>
+              <button type="button" data-sort="name" aria-pressed="false">Name</button>
+            </div>
+          </div>
+        </div>
+        <div class="grid" id="usageFiles"></div>
+      </section>
+      <section>
+        <h2>Usage checks</h2>
+        <div class="scroll"><table id="usageHistory"></table></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Changes: everything that changed with a crawl: files, categories and on-wiki usage -->
+  <div id="page-changes" hidden>
+    <div class="page-head">
+      <h2 class="page-title">Changes</h2>
+      <div class="row" style="margin:0">
+        <label class="sub" for="runSel">Crawl</label>
+        <select id="runSel"></select>
+      </div>
+    </div>
+    <div id="notice"></div>
+    <div class="kpis" id="changeKpis"></div>
+    <div id="changes"></div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="status.js"></script>
+<script src="views_status.js"></script>
+<script>
+const DATA = /*__DATA__*/null;
+const WIKI = "https://commons.wikimedia.org/wiki/";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pageUrl = (t) => WIKI + encodeURIComponent(t.replace(/ /g, "_")).replace(/%3A/g, ":").replace(/%2F/g, "/");
+const logUrl = (t) => "https://commons.wikimedia.org/w/index.php?title=Special:Log&page=" + encodeURIComponent(t);
+const thumbUrl = (t) => WIKI + "Special:FilePath/" + encodeURIComponent(t.replace(/^File:/, "").replace(/ /g, "_")) + "?width=330";
+const link = (t, label) => `<a href="${pageUrl(t)}" target="_blank" rel="noopener">${esc(label ?? t)}</a>`;
+const short = (t) => t.replace(/^(Category|File):/, "");
+const catChips = (list, cls = "") => list && list.length
+  ? `<span class="chips">${list.map(t => `<span class="chip ${cls}">${link(t, short(t))}</span>`).join("")}</span>` : "—";
+const fmt = (n) => Number(n).toLocaleString();
+// All times are shown in UTC on a 24-hour clock, e.g. "23 Oct 2026, 16:28".
+const TIME_UTC = new Intl.DateTimeFormat("en-GB", {timeZone: "UTC", day: "numeric", month: "short", year: "numeric",
+  hour: "2-digit", minute: "2-digit", hour12: false});
+const whenShort = (iso) => iso ? TIME_UTC.format(new Date(iso)).replace(/\b(am|pm)\b/i, (m) => m.toUpperCase()) : "—";
+const when = (iso) => iso ? whenShort(iso) + " UTC" : "—";
+
+// Who made a change (found by attribution.py): {user, timestamp, how, url, wiki}. A usage-log row carries it in
+// columns 9-12: changed_by, changed_at_utc, how, edit_link.
+const rowEdit = (r) => r && r[11] ? {user: r[9], timestamp: r[10], how: r[11], url: r[12]} : null;
+function editHost(e) {
+  if (e.wiki) return e.wiki;
+  try { return new URL(e.url).host; } catch (_) { return "commons.wikimedia.org"; }
+}
+function editUser(e) {
+  if (!e.user || e.user === "(hidden)" || e.user === "(unknown)") return esc(e.user || "(unknown)");
+  const host = editHost(e);
+  return `<a href="https://${host}/wiki/User:${encodeURIComponent(e.user.replace(/ /g, "_"))}" target="_blank" rel="noopener"><b>${esc(e.user)}</b></a>`;
+}
+// Full form: "Page deleted by X, 3 Nov 2026, 2:10 PM · deletion log". `short` drops the time.
+function editInfo(e, brief) {
+  if (!e || !e.how) return "";
+  const a = (label) => e.url ? ` · <a href="${esc(e.url)}" target="_blank" rel="noopener">${label}</a>` : "";
+  const t = !brief && e.timestamp ? `, ${whenShort(e.timestamp)}` : "";
+  const how = e.how;
+  if (how.startsWith("not looked up")) return `<span class="sub">Who made it: not looked up${a("page history")}</span>`;
+  if (how.startsWith("not found by name")) return `<span class="sub">Who made it: no edit names the file${brief ? "" : ` (${esc(how.replace(/^not found by name; /, ""))})`}${a("edits in that time")}</span>`;
+  if (how.startsWith("not found")) return `<span class="sub">Who made it: not found${a("page history")}</span>`;
+  if (how === "page deleted") return `<span class="cause bad">Page deleted</span> by ${editUser(e)}${t}${a("deletion log")}`;
+  if (how === "deleted") return `<span class="cause bad">Deleted</span> by ${editUser(e)}${t}${a("deletion log")}`;
+  if (how.startsWith("page moved")) return `<span class="cause">${esc(how.replace(/^page moved/, "Page moved"))}</span> by ${editUser(e)}${t}${a("move log")}`;
+  if (how === "uploaded") return `Uploaded by ${editUser(e)}${t}${a("upload")}`;
+  if (how === "category created") return `Created by ${editUser(e)}${t}${a("first version")}`;
+  if (how === "page turned into a redirect") return `<span class="cause">Page turned into a redirect</span> by ${editUser(e)}${t}${a("diff")}`;
+  if (how.startsWith("its category")) return `<span class="cause">${esc(how.replace(/^its/, "Its"))}</span>: by ${editUser(e)}${t}${a("diff")}`;
+  const via = how === "page edit" ? "" : ` <span class="sub">(${esc(how)})</span>`;
+  return `By ${editUser(e)}${t}${a("diff")}${via}`;
+}
+// For tables: one cell with every distinct edit of an item ("by" or, per category, "by_category").
+function editsCell(item) {
+  const list = item.by_category ? Object.values(item.by_category) : item.by ? [item.by] : [];
+  const seen = new Set(), out = [];
+  for (const e of list) {
+    const k = e.url + "|" + e.how;
+    if (!seen.has(k)) { seen.add(k); out.push(`<div>${editInfo(e)}</div>`); }
+  }
+  return out.join("") || `<span class="sub">—</span>`;
+}
+
+function thumb(title, missing) {
+  if (missing) return `<div class="thumb">File deleted — no preview</div>`;
+  return `<div class="thumb"><img loading="lazy" alt="" src="${thumbUrl(title)}"
+    onerror="this.parentNode.textContent='No preview'"></div>`;
+}
+
+function render() {
+  if (!DATA || !DATA.snapshot) {
+    $("kpis").innerHTML = `<div class="notice" style="grid-column:1/-1">No data yet. Open <a href="#/crawls">Crawls</a> and start the first crawl.</div>`;
+    return;
+  }
+  const snap = DATA.snapshot, hist = DATA.history || [], reports = DATA.reports || [];
+  $("title").textContent = short(snap.root) + " tracker";
+  $("subtitle").innerHTML = `${link(snap.root)} · last crawl ${when(snap.taken_at)}`;
+  renderHome(snap, reports[reports.length - 1]);
+  renderGrowth(DATA.growth, snap);
+  renderUsage(DATA.usage);
+  renderContributors(DATA.contributors, snap);
+  renderPlaces(DATA.places);
+  renderViews(DATA.views);
+
+  const sel = $("runSel");
+  sel.innerHTML = reports.length
+    ? reports.slice().reverse().map((r, i) => `<option value="${reports.length - 1 - i}">${whenShort(r.taken_at)} vs ${whenShort(r.compared_with)} (UTC)</option>`).join("")
+    : `<option>Baseline only</option>`;
+  sel.disabled = !reports.length;
+  sel.onchange = () => renderReport(reports[+sel.value], snap);
+  renderReport(reports[reports.length - 1], snap);
+  renderHistory(hist);
+  setupTabs(snap);
+}
+
+// ---- Media over time: files in Korikath now, by the date each was first uploaded (UTC).
+function renderGrowth(growth, snap) {
+  const host = $("growthChart");
+  if (!growth || !growth.days.length) {
+    host.innerHTML = `<div class="empty">Upload dates haven't been fetched yet. They're fetched with the next crawl.</div>`;
+    $("growthSeg").hidden = true;
+    return;
+  }
+  if (!window.d3) {
+    host.innerHTML = `<div class="empty">The chart needs an internet connection to load its drawing library. Reopen the page when you're online.</div>`;
+    return;
+  }
+  const parse = d3.timeParse("%Y-%m-%d"), dayFmt = d3.timeFormat("%-d %b %Y"), monthFmt = d3.timeFormat("%b %Y");
+  let total = 0;
+  const daily = growth.days.map(([d, n]) => ({date: parse(d), n, total: (total += n)}));
+  const monthly = d3.rollups(daily, v => d3.sum(v, d => d.n), d => d3.timeMonth(d.date))
+    .map(([date, n]) => ({date, n})).sort((a, b) => a.date - b.date);
+  const busiest = monthly.reduce((a, b) => (b.n > a.n ? b : a));
+  const first = daily[0].date;
+  $("growthNote").innerHTML = `Counts the ${fmt(total)} files in Korikath now by the day each was first uploaded (UTC), since
+    ${dayFmt(first)}. A file added to the category later still counts from its upload date.
+    Busiest month: ${monthFmt(busiest.date)} with ${fmt(busiest.n)} uploads.` +
+    (growth.unknown ? ` ${fmt(growth.unknown)} file${growth.unknown === 1 ? "" : "s"} without a known upload date ${growth.unknown === 1 ? "is" : "are"} left out.` : "");
+
+  let view = "total";
+  const A = DATA.assessments;
+  $("viewAssessed").hidden = !A;
+  const Z = DATA.places && DATA.places.size;
+  $("viewSize").hidden = !Z;
+  try { const v = localStorage.getItem("growthView"); if (v === "monthly" || (v === "assessed" && A) || (v === "size" && Z)) view = v; } catch (e) {}
+  let sizeRun = 0;
+  const sizePoints = Z ? Z.by_month.map(([m, b]) => ({date: new Date(+m.slice(0, 4), +m.slice(5) - 1, 1), v: (sizeRun += b)})) : [];
+  // Running totals per month of files that became quality / featured / valued images (UTC months).
+  const KINDS = [["qi", "quality", "var(--accent)"], ["vi", "valued", "var(--info)"], ["fp", "featured", "var(--warn)"]];
+  let assessed = null;
+  if (A) {
+    const months = [...new Set(KINDS.flatMap(([k]) => A.monthly[k].map(([m]) => m)))].sort();
+    if (months.length) {
+      const [y0, m0] = months[0].split("-").map(Number), [y1, m1] = months[months.length - 1].split("-").map(Number);
+      const all = [];
+      for (let y = y0, m = m0; y < y1 || (y === y1 && m <= m1); m === 12 ? (y++, m = 1) : m++) all.push(`${y}-${String(m).padStart(2, "0")}`);
+      const run = {qi: 0, vi: 0, fp: 0}, per = {};
+      for (const [k] of KINDS) per[k] = Object.fromEntries(A.monthly[k]);
+      assessed = all.map(m => {
+        for (const [k] of KINDS) run[k] += per[k][m] || 0;
+        return {date: new Date(+m.slice(0, 4), +m.slice(5) - 1, 1), ...run};
+      });
+    }
+  }
+  const assessedText = (d) => KINDS.map(([k, w, c]) => `<b style="color:${c}">${fmt(d[k])}</b> ${w}`).join(" · ");
+  const buttons = [...$("growthSeg").querySelectorAll("button")];
+  buttons.forEach(b => b.onclick = () => {
+    view = b.dataset.view;
+    try { localStorage.setItem("growthView", view); } catch (e) {}
+    draw();
+  });
+
+  const readout = $("growthReadout");
+  const defaultReadout = () => view === "total"
+    ? `<b>${fmt(total)}</b> files by ${dayFmt(daily[daily.length - 1].date)}`
+    : view === "assessed"
+      ? (assessed ? `${assessedText(assessed[assessed.length - 1])} now` : "No assessed images yet")
+      : view === "size" ? `<b>${bytes(sizeRun)}</b> in all now`
+      : `<b>${fmt(monthly[monthly.length - 1].n)}</b> uploads in ${monthFmt(monthly[monthly.length - 1].date)}`;
+
+  function draw() {
+    buttons.forEach(b => b.setAttribute("aria-pressed", b.dataset.view === view));
+    host.innerHTML = "";
+    readout.innerHTML = defaultReadout();
+    const W = Math.max(host.clientWidth, 280), H = W < 520 ? 220 : 300;
+    const m = {top: 12, right: 16, bottom: 28, left: W < 520 ? 44 : 56};
+    const svg = d3.select(host).append("svg").attr("viewBox", [0, 0, W, H]).attr("height", H)
+      .attr("role", "img").attr("aria-label", view === "total" ? "Total Korikath files over time"
+        : view === "assessed" ? "Quality, featured and valued Korikath images over time" : "Korikath uploads per month");
+    if (view === "size") {
+      // Reuse the monthly running-total chart, with sizes on the axis.
+      host.innerHTML = "";
+      const draw2 = monthChart(host, readout, sizePoints, "step", (d, f) => `<b>${bytes(d.v)}</b> by the end of ${f(d.date)}`,
+        () => `<b>${bytes(sizeRun)}</b> in all now`, (v) => v ? bytes(v) : "0");
+      draw2();
+      return;
+    }
+    if (view === "assessed") {
+      if (!assessed) { host.innerHTML = `<div class="empty">No quality, featured or valued images yet.</div>`; return; }
+      const end2 = d3.timeMonth.offset(assessed[assessed.length - 1].date, 1);
+      const x = d3.scaleTime().domain([assessed[0].date, end2]).range([m.left, W - m.right]);
+      const y = d3.scaleLinear().domain([0, d3.max(assessed, d => Math.max(d.qi, d.vi, d.fp)) || 1]).nice().range([H - m.bottom, m.top]);
+      svg.append("g").attr("class", "grid").attr("transform", `translate(${m.left},0)`)
+        .call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.left - m.right)).tickFormat(""));
+      svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
+        .call(d3.axisLeft(y).ticks(5).tickFormat(v => v >= 1000 ? d3.format("~s")(v) : v)).call(g => g.select(".domain").remove());
+      svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.bottom})`)
+        .call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(W / 110))).tickSizeOuter(0));
+      const pts = [...assessed, {...assessed[assessed.length - 1], date: end2}];
+      for (const [k, , color] of KINDS) {
+        svg.append("path").datum(pts).attr("fill", "none").attr("stroke", color).attr("stroke-width", 2.2)
+          .attr("d", d3.line().curve(d3.curveStepAfter).x(d => x(d.date)).y(d => y(d[k])));
+      }
+      const rule = svg.append("line").attr("stroke", "var(--muted)").attr("stroke-dasharray", "3 3")
+        .attr("y1", m.top).attr("y2", H - m.bottom).style("display", "none");
+      const bisect = d3.bisector(d => d.date).right;
+      svg.append("rect").attr("x", m.left).attr("y", m.top).attr("width", W - m.left - m.right).attr("height", H - m.top - m.bottom)
+        .attr("fill", "transparent")
+        .on("pointermove", (e) => {
+          const t = x.invert(d3.pointer(e)[0]);
+          const d = assessed[Math.max(0, bisect(assessed, t) - 1)];
+          rule.style("display", null).attr("x1", x(t)).attr("x2", x(t));
+          readout.innerHTML = `${assessedText(d)} by the end of ${monthFmt(d.date)}`;
+        })
+        .on("pointerleave", () => { rule.style("display", "none"); readout.innerHTML = defaultReadout(); });
+      return;
+    }
+    const end = d3.timeDay.offset(daily[daily.length - 1].date, 1);
+    const x = d3.scaleTime().domain([view === "total" ? first : monthly[0].date,
+      view === "total" ? end : d3.timeMonth.offset(monthly[monthly.length - 1].date, 1)]).range([m.left, W - m.right]);
+    const yMax = view === "total" ? total : busiest.n;
+    const y = d3.scaleLinear().domain([0, yMax]).nice().range([H - m.bottom, m.top]);
+    const yFmt = (v) => v >= 1000 ? d3.format("~s")(v) : v;  // 20000 -> "20k"
+    svg.append("g").attr("class", "grid").attr("transform", `translate(${m.left},0)`)
+      .call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.left - m.right)).tickFormat(""));
+    svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
+      .call(d3.axisLeft(y).ticks(5).tickFormat(yFmt)).call(g => g.select(".domain").remove());
+    svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.bottom})`)
+      .call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(W / 110))).tickSizeOuter(0));
+
+    const rule = svg.append("line").attr("stroke", "var(--muted)").attr("stroke-dasharray", "3 3")
+      .attr("y1", m.top).attr("y2", H - m.bottom).style("display", "none");
+
+    if (view === "total") {
+      // Step at each upload day, carried on to today.
+      const pts = [{date: first, total: 0}, ...daily, {date: end, total}];
+      svg.append("path").datum(pts).attr("fill", "var(--accent)").attr("fill-opacity", 0.14)
+        .attr("d", d3.area().curve(d3.curveStepAfter).x(d => x(d.date)).y0(y(0)).y1(d => y(d.total)));
+      svg.append("path").datum(pts).attr("fill", "none").attr("stroke", "var(--accent)").attr("stroke-width", 2)
+        .attr("d", d3.line().curve(d3.curveStepAfter).x(d => x(d.date)).y(d => y(d.total)));
+      const dot = svg.append("circle").attr("r", 4).attr("fill", "var(--accent)").attr("stroke", "var(--surface)")
+        .attr("stroke-width", 2).style("display", "none");
+      const bisect = d3.bisector(d => d.date).right;
+      svg.append("rect").attr("x", m.left).attr("y", m.top).attr("width", W - m.left - m.right).attr("height", H - m.top - m.bottom)
+        .attr("fill", "transparent")
+        .on("pointermove", (e) => {
+          const t = x.invert(d3.pointer(e)[0]);
+          const i = bisect(daily, t) - 1;
+          const d = i >= 0 ? daily[i] : {date: first, total: 0, n: 0};
+          const sameDay = i >= 0 && +d3.timeDay(t) === +d.date;
+          rule.style("display", null).attr("x1", x(t)).attr("x2", x(t));
+          dot.style("display", null).attr("cx", x(t)).attr("cy", y(d.total));
+          readout.innerHTML = `<b>${fmt(d.total)}</b> files by ${dayFmt(d3.timeDay(t))}` +
+            (sameDay ? ` · ${fmt(d.n)} uploaded that day` : "");
+        })
+        .on("pointerleave", () => { rule.style("display", "none"); dot.style("display", "none"); readout.innerHTML = defaultReadout(); });
+    } else {
+      const bar = periodBar(x, d3.timeMonth);
+      svg.append("g").selectAll("rect").data(monthly).join("rect")
+        .attr("x", bar.x).attr("width", bar.width).attr("y", d => y(d.n)).attr("height", d => y(0) - y(d.n))
+        .attr("rx", d => Math.min(3, bar.width(d) / 2)).attr("fill", "var(--accent)").attr("fill-opacity", 0.85)
+        .on("pointerenter", function (e, d) {
+          d3.select(this).attr("fill-opacity", 1);
+          readout.innerHTML = `<b>${fmt(d.n)}</b> uploads in ${monthFmt(d.date)}`;
+        })
+        .on("pointerleave", function () { d3.select(this).attr("fill-opacity", 0.85); readout.innerHTML = defaultReadout(); });
+    }
+  }
+  draw();
+  let t;
+  window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => { if (!$("page-home").hidden) draw(); }, 150); });
+  window.addEventListener("hashchange", () => { if (!$("page-home").hidden) setTimeout(draw, 0); });
+}
+
+// ---- Shared table helpers
+// Tables show the first rows, with a button for the rest (a table stays expanded once opened).
+const expanded = {};
+function table(id, head, rows, first = 15) {
+  const el = $(id);
+  if (expanded[id]) first = Infinity;
+  el.innerHTML = `<tr>${head}</tr>` + rows.map((r, i) => r.replace("<tr", `<tr${i >= first ? " hidden data-more" : ""}`)).join("");
+  el.parentElement.parentElement.querySelectorAll(".more-btn").forEach(b => b.remove());
+  if (rows.length > first) {
+    const b = document.createElement("button");
+    b.className = "btn more-btn";
+    b.textContent = `Show all ${fmt(rows.length)}`;
+    b.onclick = () => { expanded[id] = true; el.querySelectorAll("tr[data-more]").forEach(r => r.hidden = false); b.remove(); };
+    el.parentElement.after(b);
+  }
+}
+
+// Sortable table: each column heading is a button. Numbers sort highest first on the first click,
+// names A to Z; clicking the same heading again reverses the order.
+const sortState = {};
+function sortTable(id, cols, data, first = 15, defaultCol = 1) {
+  const st = sortState[id] || (sortState[id] = {col: defaultCol, dir: cols[defaultCol].text ? 1 : -1});
+  const key = cols[st.col].key;
+  const sorted = data.map((d, i) => [d, i]).sort(([a, ia], [b, ib]) => {
+    const x = key(a), y = key(b);
+    const c = typeof x === "string" ? x.localeCompare(y) : x - y;
+    return c * st.dir || ia - ib;
+  }).map(p => p[0]);
+  const head = cols.map((c, i) => {
+    const on = i === st.col;
+    return `<th class="${c.cls || ""}" aria-sort="${on ? (st.dir > 0 ? "ascending" : "descending") : "none"}">` +
+      `<button type="button" class="sort${on ? " on" : ""}" data-col="${i}" title="Sort by ${esc(c.label)}">${c.label}` +
+      `&nbsp;<span class="arrow" aria-hidden="true">${on ? (st.dir > 0 ? "▲" : "▼") : "↕"}</span></button></th>`;
+  }).join("");
+  table(id, head, sorted.map(d => `<tr>${cols.map((c, i) => `<td class="${c.cls || ""}${i === st.col ? " sorted" : ""}">${c.cell(d)}</td>`).join("")}</tr>`), first);
+  $(id).querySelectorAll("button.sort").forEach(b => b.onclick = () => {
+    const i = +b.dataset.col;
+    if (st.col === i) st.dir = -st.dir;
+    else { st.col = i; st.dir = cols[i].text ? 1 : -1; }
+    sortTable(id, cols, data, first, defaultCol);
+    $(id).querySelector(`button.sort[data-col="${i}"]`).focus();
+  });
+}
+
+
+// ---- Chart of monthly values: bars (per month) or a step line (running total), with a hover readout.
+// Bar from one period's start to the next, minus a small gap: months differ in length, so each bar gets its own width.
+function periodBar(x, interval) {
+  const span = (d) => x(interval.offset(d.date, 1)) - x(d.date);
+  const gap = (d) => Math.min(2, span(d) * 0.15);
+  return {x: (d) => x(d.date) + gap(d) / 2, width: (d) => Math.max(0.5, span(d) - gap(d))};
+}
+
+// interval: d3.timeMonth for monthly points (default), d3.timeDay for daily ones.
+function monthChart(host, readout, points, kind, describe, summary, yFormat, interval) {
+  if (!window.d3) {
+    host.innerHTML = `<div class="empty">Charts need an internet connection to load their drawing library.</div>`;
+    return () => {};
+  }
+  const monthFmt = d3.timeFormat("%b %Y");
+  // Text shown when not hovering: a summary if given, otherwise the latest month.
+  const defaultText = () => summary ? summary() : describe(points[points.length - 1], monthFmt);
+  function draw() {
+    host.innerHTML = "";
+    readout.innerHTML = defaultText();
+    if (!points.length) return;
+    const W = Math.max(host.clientWidth, 280), H = W < 520 ? 200 : 260;
+    const m = {top: 12, right: 16, bottom: 28, left: W < 520 ? 40 : 52};
+    const step = interval || d3.timeMonth;
+    const end = step.offset(points[points.length - 1].date, 1);
+    const x = d3.scaleTime().domain([points[0].date, end]).range([m.left, W - m.right]);
+    const y = d3.scaleLinear().domain([0, d3.max(points, d => d.v) || 1]).nice().range([H - m.bottom, m.top]);
+    const svg = d3.select(host).append("svg").attr("viewBox", [0, 0, W, H]).attr("height", H);
+    const yFmt = yFormat || ((v) => v >= 1000 ? d3.format("~s")(v) : v);
+    svg.append("g").attr("class", "grid").attr("transform", `translate(${m.left},0)`)
+      .call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.left - m.right)).tickFormat(""));
+    svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
+      .call(d3.axisLeft(y).ticks(5).tickFormat(yFmt)).call(g => g.select(".domain").remove());
+    svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.bottom})`)
+      .call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(W / 110))).tickSizeOuter(0));
+    const show = (d) => { readout.innerHTML = describe(d, monthFmt); };
+    if (kind === "bars") {
+      const bar = periodBar(x, step);
+      svg.append("g").selectAll("rect").data(points).join("rect")
+        .attr("x", bar.x).attr("width", bar.width).attr("y", d => y(d.v)).attr("height", d => y(0) - y(d.v))
+        .attr("rx", d => Math.min(3, bar.width(d) / 2)).attr("fill", "var(--accent)").attr("fill-opacity", 0.85)
+        .on("pointerenter", function (e, d) { d3.select(this).attr("fill-opacity", 1); show(d); })
+        .on("pointerleave", function () { d3.select(this).attr("fill-opacity", 0.85); readout.innerHTML = defaultText(); });
+    } else {
+      const pts = [...points, {date: end, v: points[points.length - 1].v}];
+      svg.append("path").datum(pts).attr("fill", "var(--accent)").attr("fill-opacity", 0.14)
+        .attr("d", d3.area().curve(d3.curveStepAfter).x(d => x(d.date)).y0(y(0)).y1(d => y(d.v)));
+      svg.append("path").datum(pts).attr("fill", "none").attr("stroke", "var(--accent)").attr("stroke-width", 2)
+        .attr("d", d3.line().curve(d3.curveStepAfter).x(d => x(d.date)).y(d => y(d.v)));
+      const rule = svg.append("line").attr("stroke", "var(--muted)").attr("stroke-dasharray", "3 3")
+        .attr("y1", m.top).attr("y2", H - m.bottom).style("display", "none");
+      const bisect = d3.bisector(d => d.date).right;
+      svg.append("rect").attr("x", m.left).attr("y", m.top).attr("width", W - m.left - m.right).attr("height", H - m.top - m.bottom)
+        .attr("fill", "transparent")
+        .on("pointermove", (e) => {
+          const t = x.invert(d3.pointer(e)[0]);
+          const d = points[Math.max(0, bisect(points, t) - 1)];
+          rule.style("display", null).attr("x1", x(t)).attr("x2", x(t));
+          show(d);
+        })
+        .on("pointerleave", () => { rule.style("display", "none"); readout.innerHTML = defaultText(); });
+    }
+  }
+  return draw;
+}
+const redrawOnResize = [];
+{
+  let t;
+  window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => redrawOnResize.forEach(f => f()), 150); });
+}
+
+// ---- On-wiki usage page
+function renderUsage(U) {
+  if (!U) {
+    $("ncUsage").textContent = "Not checked yet. Start a usage check on the Crawls page.";
+    $("usageBody").hidden = true;
+    $("usageEmpty").innerHTML = `<div class="notice">On-wiki usage hasn't been checked yet. Start a check from <a href="#/crawls">Crawls</a>; after that it runs after every scheduled crawl.</div>`;
+    return;
+  }
+  const pct = (a, b) => b ? (100 * a / b).toFixed(a / b < 0.01 ? 2 : 1) + "%" : "—";
+  const bar = (a, b) => `<div class="bar"><span style="width:${b ? Math.max(100 * a / b, 0.5) : 0}%"></span></div>`;
+  const wikiUrl = (w) => `https://${w}/`;
+  const pageLink = (wiki, title) => `<a href="https://${wiki}/wiki/${encodeURIComponent(title.replace(/ /g, "_")).replace(/%3A/g, ":").replace(/%2F/g, "/")}" target="_blank" rel="noopener">${esc(title.replace(/_/g, " "))}</a>`;
+  const wikiName = (w) => w.replace(/^www\./, "").replace(/\.org$/, "");
+  const userLink = (u) => u && u !== "(unknown)" ? link("User:" + u, u) : "(unknown)";
+  const a = U.all;
+  $("ncUsage").textContent = `${fmt(a.files_used)} files (${pct(a.files_used, U.total_files)}) used on ${fmt(a.pages)} pages across ${fmt(a.wikis)} wikis`;
+  $("usageMeta").innerHTML = `Last checked ${when(U.checked_at)}. Pages on other Wikimedia wikis that show Korikath files (Commons itself not counted). ` +
+    `<b>Articles only</b> counts main-namespace pages: Wikipedia articles, Wikidata items and the like.`;
+
+  let scope = "all", filter = "all", fileSort = "uses";
+  function draw() {
+    const S = U[scope];
+    $("usageKpis").innerHTML =
+      kpi("Files used", fmt(S.files_used)) +
+      kpi("Share of Korikath files", pct(S.files_used, U.total_files)) +
+      kpi(scope === "all" ? "Pages using them" : "Articles using them", fmt(S.pages)) +
+      kpi("Wikis", fmt(S.wikis));
+
+    // by_wiki: [wiki, uses, files]
+    sortTable("usageWikis", [
+      {label: "Wiki", text: true, key: r => wikiLabel(r[0]), cell: r => `<a href="${wikiUrl(r[0])}" target="_blank" rel="noopener">${esc(wikiLabel(r[0]))}</a>`},
+      {label: "Uses", cls: "num", key: r => r[1], cell: r => fmt(r[1])},
+      {label: "Share of uses", cls: "barcell", key: r => r[1], cell: r => `<span class="pct">${pct(r[1], S.usages)}</span>${bar(r[1], S.by_wiki[0][1])}`},
+      {label: "Files", cls: "num", key: r => r[2], cell: r => fmt(r[2])},
+    ], S.by_wiki);
+
+    // by_uploader: [uploader, files uploaded, files used, uses]
+    sortTable("usageUploaders", [
+      {label: "Uploader", text: true, key: r => r[0], cell: r => userLink(r[0])},
+      {label: "Files used", cls: "num", key: r => r[2], cell: r => fmt(r[2])},
+      {label: "Of the uploader's files", cls: "barcell", key: r => r[1] ? r[2] / r[1] : 0, cell: r => `<span class="pct">${pct(r[2], r[1])} of ${fmt(r[1])}</span>${bar(r[2], r[1])}`},
+      {label: "Uses", cls: "num", key: r => r[3], cell: r => fmt(r[3])},
+    ], S.by_uploader);
+
+    // by_category: [title, files below, used below, uses below]
+    sortTable("usageCats", [
+      {label: "Category", text: true, key: r => short(r[0]), cell: r => link(r[0], short(r[0]))},
+      {label: "Files used", cls: "num", key: r => r[2], cell: r => fmt(r[2])},
+      {label: "Of its files", cls: "barcell", key: r => r[1] ? r[2] / r[1] : 0, cell: r => `<span class="pct">${pct(r[2], r[1])} of ${fmt(r[1])}</span>${bar(r[2], r[1])}`},
+      {label: "Uses", cls: "num", key: r => r[3], cell: r => fmt(r[3])},
+      {label: "Share of all used files", cls: "barcell", key: r => r[2], cell: r => `<span class="pct">${pct(r[2], S.files_used)}</span>${bar(r[2], S.files_used)}`},
+    ], S.by_category, 20);
+
+    // top_files: [title, uploader, uses, wikis, sample pages]
+    const byFiles = {
+      uses: (a, b) => b[2] - a[2] || b[3] - a[3],
+      wikis: (a, b) => b[3] - a[3] || b[2] - a[2],
+      name: (a, b) => short(a[0]).localeCompare(short(b[0])),
+    };
+    $("usageFiles").innerHTML = S.top_files.slice().sort(byFiles[fileSort]).slice(0, 24).map(([t, u, n, w, pages]) => `<div class="card">
+      <a href="${pageUrl(t)}" target="_blank" rel="noopener">${thumb(t)}</a>
+      <div class="body"><div class="name">${link(t, short(t))}</div>
+        <div class="kv"><b>${fmt(n)}</b> ${n === 1 ? "page" : "pages"} on <b>${fmt(w)}</b> ${w === 1 ? "wiki" : "wikis"} · by ${userLink(u)}</div>
+        <ul class="usage-pages">${pages.map(([wk, pg]) => `<li>${esc(wikiName(wk))}: ${pageLink(wk, pg)}</li>`).join("")}${n > pages.length ? `<li>and ${fmt(n - pages.length)} more</li>` : ""}</ul>
+      </div></div>`).join("");
+
+    // checked_at, change, file, file_url, wiki, namespace, page, page_url, uploader
+    const rows = U.recent.filter(r => (filter === "all" || r[1] === filter) && (scope === "all" || r[5] === "0"));
+    $("usageChangeCount").textContent = fmt(U.log_rows) + " logged";
+    if (!U.history.some(h => h.added != null)) {
+      $("usageChanges").innerHTML = `<tr><td class="empty">The first check is the starting point. Usage added or removed after it is listed here and in the change log.</td></tr>`;
+    } else if (!rows.length) {
+      $("usageChanges").innerHTML = `<tr><td class="empty">No ${filter === "all" ? "" : filter + " "}usage changes${scope === "content" ? " in articles" : ""} in the latest entries of the log.</td></tr>`;
+    } else {
+      // The log arrives newest first; "When" sorts by that position.
+      sortTable("usageChanges", [
+        {label: "When", key: r => -r.order, cell: r => esc(r[0])},
+        {label: "Change", text: true, key: r => r[1], cell: r => `<span class="badge ${r[1]}">${esc(r[1])}</span>`},
+        {label: "File", text: true, key: r => short(r[2]), cell: r => `<a href="${esc(r[3])}" target="_blank" rel="noopener">${esc(short(r[2]))}</a>`},
+        {label: "Page", text: true, key: r => wikiName(r[4]) + " " + r[6], cell: r => `${esc(wikiName(r[4]))}: <a href="${esc(r[7])}" target="_blank" rel="noopener">${esc(r[6])}</a>`},
+        {label: "Uploader", text: true, key: r => r[8] || "", cell: r => userLink(r[8])},
+        {label: "Changed by", text: true, key: r => r[9] || "~", cell: r => editInfo(rowEdit(r)) || `<span class="sub">—</span>`},
+      ], rows.map((r, i) => Object.assign(r.slice(), {order: i})), 25, 0);
+    }
+
+    $("usageHistory").innerHTML = `<tr><th>Checked (UTC)</th><th class="num">Files used</th><th class="num">Pages</th><th class="num">Uses</th><th class="num">Wikis</th><th class="num">Added</th><th class="num">Removed</th></tr>` +
+      U.history.slice().reverse().map(h => `<tr><td>${whenShort(h.checked_at)}</td><td class="num">${fmt(h.files_used)}</td><td class="num">${h.pages == null ? "—" : fmt(h.pages)}</td><td class="num">${fmt(h.usages)}</td>
+        <td class="num">${fmt(h.wikis)}</td><td class="num">${h.added == null ? "first check" : fmt(h.added)}</td><td class="num">${h.removed == null ? "" : fmt(h.removed)}</td></tr>`).join("");
+  }
+  const segButtons = (id, key, set) => $(id).querySelectorAll("button").forEach(b => b.onclick = () => {
+    set(b.dataset[key]);
+    $(id).querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    draw();
+  });
+  // The change log exists from the second check on.
+  if (U.history.some(h => h.added != null)) {
+    $("usageDl").innerHTML = rangePanel("usage");
+    wireRangeDownload("usage");
+  }
+  segButtons("usageSeg", "scope", v => scope = v);
+  segButtons("changeFilter", "f", v => filter = v);
+  segButtons("fileSort", "sort", v => fileSort = v);
+  renderMainPage();
+  draw();
+}
+
+// ---- Contributors page
+const DAY_FMT = new Intl.DateTimeFormat("en-GB", {timeZone: "UTC", day: "numeric", month: "short", year: "numeric"});
+const dayOnly = (iso) => iso ? DAY_FMT.format(new Date(iso)) : "—";
+let showPerson = () => {};
+function renderContributors(C, snap) {
+  if (!C) {
+    $("ncContrib").textContent = "Available after upload dates are looked up.";
+    $("contribMeta").textContent = "Contributor statistics appear after the next crawl looks up each file's uploader.";
+    return;
+  }
+  // users: [name, files, first upload, last upload, files used on wikis, uses, {month: files}, [[category, files]], categories]
+  const U = C.users, total = C.total_files;
+  const pct = (a, b) => b ? (100 * a / b).toFixed(a / b < 0.01 ? 2 : 1) + "%" : "—";
+  const bar = (a, b) => `<div class="bar"><span style="width:${b ? Math.max(100 * a / b, 0.5) : 0}%"></span></div>`;
+  const now = Date.parse(snap.taken_at), cutoff = now - 30 * 864e5;
+  const top10 = U.slice(0, 10).reduce((n, u) => n + u[1], 0);
+  const sorted = U.map(u => u[1]).sort((a, b) => a - b);
+  const median = sorted.length ? (sorted.length % 2 ? sorted[(sorted.length - 1) / 2]
+    : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2) : 0;
+  const fresh = U.filter(u => Date.parse(u[2]) >= cutoff).length;
+  const active = U.filter(u => Date.parse(u[3]) >= cutoff).length;
+
+  $("ncContrib").textContent = `${fmt(U.length)} people uploaded Korikath's files · the top 10 uploaded ${pct(top10, total)}`;
+  $("contribMeta").innerHTML = `People who uploaded the ${fmt(total)} files now in Korikath (the original uploader of each file), as of the last crawl, ${when(snap.taken_at)}. Months are in UTC.`;
+  $("contribKpis").innerHTML =
+    kpi("Contributors", fmt(U.length)) +
+    kpi("New in the last 30 days", fmt(fresh), null, false, "first upload in that time") +
+    kpi("Active in the last 30 days", fmt(active), null, false, "uploaded at least one file") +
+    kpi("Top 10 uploaded", pct(top10, total), null, false, "of all files") +
+    kpi("Median per contributor", fmt(median), null, false, median === 1 ? "file" : "files");
+
+  // Contributors over time
+  const firstMonth = (u) => Object.keys(u[6]).sort()[0];  // months are "YYYY-MM" in UTC, from the tracker
+  const allMonths = [...new Set(U.flatMap(u => Object.keys(u[6])))].sort();
+  const months = [];
+  if (allMonths.length) {
+    const [y0, m0] = allMonths[0].split("-").map(Number), [y1, m1] = allMonths[allMonths.length - 1].split("-").map(Number);
+    for (let y = y0, m = m0; y < y1 || (y === y1 && m <= m1); m === 12 ? (y++, m = 1) : m++) months.push(`${y}-${String(m).padStart(2, "0")}`);
+  }
+  const newBy = {}, activeBy = {};
+  for (const u of U) {
+    const f = firstMonth(u);
+    newBy[f] = (newBy[f] || 0) + 1;
+    for (const m of Object.keys(u[6])) activeBy[m] = (activeBy[m] || 0) + 1;
+  }
+  const toDate = (m) => new Date(+m.slice(0, 4), +m.slice(5) - 1, 1);
+  let running = 0;
+  const series = {
+    total: months.map(m => ({date: toDate(m), v: (running += newBy[m] || 0)})),
+    active: months.map(m => ({date: toDate(m), v: activeBy[m] || 0})),
+    new: months.map(m => ({date: toDate(m), v: newBy[m] || 0})),
+  };
+  const say = {
+    total: (d, f) => `<b>${fmt(d.v)}</b> contributors by the end of ${f(d.date)}`,
+    active: (d, f) => `<b>${fmt(d.v)}</b> ${d.v === 1 ? "person" : "people"} uploaded in ${f(d.date)}`,
+    new: (d, f) => `<b>${fmt(d.v)}</b> new ${d.v === 1 ? "contributor" : "contributors"} in ${f(d.date)}`,
+  };
+  let view = "total", drawChart;
+  const chart = () => {
+    drawChart = monthChart($("contribChart"), $("contribReadout"), series[view], view === "total" ? "step" : "bars", say[view]);
+    drawChart();
+  };
+  $("contribView").querySelectorAll("button").forEach(b => b.onclick = () => {
+    view = b.dataset.view;
+    $("contribView").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    chart();
+  });
+
+  // How much people upload
+  const groups = [[1, 1, "1 file"], [2, 10, "2–10 files"], [11, 100, "11–100 files"], [101, 1000, "101–1,000 files"],
+    [1001, 10000, "1,001–10,000 files"], [10001, Infinity, "More than 10,000 files"]];
+  const groupRows = groups.map(([lo, hi, label]) => {
+    const g = U.filter(u => u[1] >= lo && u[1] <= hi);
+    return [label, g.length, g.reduce((n, u) => n + u[1], 0), lo];
+  }).filter(r => r[1]);
+  sortState.contribBuckets = sortState.contribBuckets || {col: 0, dir: 1};  // smallest group first
+  sortTable("contribBuckets", [
+    {label: "Uploaded", key: r => r[3], cell: r => r[0]},
+    {label: "Contributors", cls: "num", key: r => r[1], cell: r => fmt(r[1])},
+    {label: "Share of contributors", cls: "barcell", key: r => r[1], cell: r => `<span class="pct">${pct(r[1], U.length)}</span>${bar(r[1], U.length)}`},
+    {label: "Files", cls: "num", key: r => r[2], cell: r => fmt(r[2])},
+    {label: "Share of files", cls: "barcell", key: r => r[2], cell: r => `<span class="pct">${pct(r[2], total)}</span>${bar(r[2], total)}`},
+  ], groupRows, 10, 0);
+
+  // One contributor
+  const byName = new Map(U.map(u => [u[0], u]));
+  // Per-person counts only list kinds the person has; anything missing is 0.
+  const qfv = (name) => {
+    const c = (DATA.assessments && DATA.assessments.by_user[name]) || {};
+    return {qi: c.qi || 0, fp: c.fp || 0, vi: c.vi || 0};
+  };
+  $("contribNames").innerHTML = U.map(u => `<option value="${esc(u[0])}">`).join("");
+  let drawPerson = () => {};
+  showPerson = (name) => {
+    const u = byName.get(name) || U[0];
+    if (!u) return;
+    const [n, files, first, last, used, uses, perMonth, catsTop, nCats] = u;
+    $("personPick").value = "";
+    $("personPick").placeholder = n;
+    const userUrl = "https://commons.wikimedia.org/wiki/User:" + encodeURIComponent(n.replace(/ /g, "_"));
+    const listUrl = "https://commons.wikimedia.org/wiki/Special:ListFiles/" + encodeURIComponent(n.replace(/ /g, "_"));
+    const activeMonths = Object.keys(perMonth).length;
+    const rank = U.indexOf(u) + 1;
+    const ms = Object.keys(perMonth).sort();
+    const pts = [];
+    if (ms.length) {
+      const [y0, m0] = ms[0].split("-").map(Number), [y1, m1] = ms[ms.length - 1].split("-").map(Number);
+      for (let y = y0, m = m0; y < y1 || (y === y1 && m <= m1); m === 12 ? (y++, m = 1) : m++) {
+        const k = `${y}-${String(m).padStart(2, "0")}`;
+        pts.push({date: toDate(k), v: perMonth[k] || 0});
+      }
+    }
+    $("person").innerHTML = `
+      <div class="person-head"><span class="pname">${esc(n)}</span>
+        <span class="person-links"><a href="${userUrl}" target="_blank" rel="noopener">User page</a> ·
+          <a href="${listUrl}" target="_blank" rel="noopener">All this member's uploads on Commons</a></span>
+        <span class="sub">#${fmt(rank)} of ${fmt(U.length)} by files</span>
+        <span class="report-dl"><button type="button" class="btn" data-report="${esc(n)}">Download this member's PDF report</button>
+          <span class="sub report-msg" aria-live="polite"></span></span></div>
+      <div class="kpis small">
+        ${kpi("Files in Korikath", fmt(files), null, false, `${pct(files, total)} of all files`)}
+        ${kpi("First upload", dayOnly(first))}
+        ${kpi("Latest upload", dayOnly(last))}
+        ${kpi("Active months", fmt(activeMonths))}
+        ${C.usage_checked ? kpi("Used on other wikis", fmt(used), null, false, `${pct(used, files)} of this member's files · ${fmt(uses)} uses`) : ""}
+        ${DATA.assessments ? kpi("Quality · Featured · Valued", `<span class="trio"><span>${fmt(qfv(n).qi)}<small>quality</small></span><span>${fmt(qfv(n).fp)}<small>featured</small></span><span>${fmt(qfv(n).vi)}<small>valued</small></span></span>`) : ""}
+      </div>
+      <div class="row"><span class="sub">Uploads per month</span><span class="growth-readout" id="personReadout"></span></div>
+      <div id="personChart" class="growth"></div>
+      <h3>Files by category <span class="count">${fmt(nCats)}</span></h3>
+      <p class="sub" style="margin:-4px 0 8px">The categories this member's files are filed in${nCats > catsTop.length ? ` (the top ${catsTop.length} shown)` : ""}. A file in several categories counts in each.
+        Catch-all categories (${C.catch_all.map(short).map(esc).join(", ")}) are left out.</p>
+      <div class="scroll"><table id="personCats"></table></div>`;
+    drawPerson = monthChart($("personChart"), $("personReadout"), pts, "bars",
+      (d, f) => d ? `<b>${fmt(d.v)}</b> ${d.v === 1 ? "file" : "files"} in ${f(d.date)}` : "",
+      () => `<b>${fmt(files)}</b> files over ${fmt(activeMonths)} active ${activeMonths === 1 ? "month" : "months"}`);
+    drawPerson();
+    delete sortState.personCats;
+    delete expanded.personCats;
+    sortTable("personCats", [
+      {label: "Category", text: true, key: r => short(r[0]), cell: r => link(r[0], short(r[0]))},
+      {label: "Files", cls: "num", key: r => r[1], cell: r => fmt(r[1])},
+      {label: "Share of this member's files", cls: "barcell", key: r => r[1], cell: r => `<span class="pct">${pct(r[1], files)}</span>${bar(r[1], files)}`},
+    ], catsTop, 15);
+  };
+  $("personPick").onchange = () => {
+    const v = $("personPick").value.trim();
+    if (byName.has(v)) location.hash = "#/contributors?u=" + encodeURIComponent(v);
+  };
+
+  // All contributors
+  const nameBtn = (n) => `<button type="button" class="linkbtn" data-person="${esc(n)}">${esc(n)}</button>`;
+  const leaderCols = [
+    {label: "Contributor", text: true, key: r => r[0].toLowerCase(), cell: r => nameBtn(r[0])},
+    {label: "Files", cls: "num", key: r => r[1], cell: r => fmt(r[1])},
+    {label: "Share of files", cls: "barcell", key: r => r[1], cell: r => `<span class="pct">${pct(r[1], total)}</span>${bar(r[1], U[0][1])}`},
+    {label: "First upload", key: r => Date.parse(r[2]), cell: r => dayOnly(r[2])},
+    {label: "Latest upload", key: r => Date.parse(r[3]), cell: r => dayOnly(r[3])},
+    {label: "Active months", cls: "num", key: r => Object.keys(r[6]).length, cell: r => fmt(Object.keys(r[6]).length)},
+    ...(C.usage_checked ? [
+      {label: "Files used on wikis", cls: "num", key: r => r[4], cell: r => fmt(r[4])},
+      {label: "Uses", cls: "num", key: r => r[5], cell: r => fmt(r[5])},
+    ] : []),
+    ...(DATA.assessments ? [
+      {label: "Quality", cls: "num", key: r => qfv(r[0]).qi, cell: r => fmt(qfv(r[0]).qi)},
+      {label: "Featured", cls: "num", key: r => qfv(r[0]).fp, cell: r => fmt(qfv(r[0]).fp)},
+      {label: "Valued", cls: "num", key: r => qfv(r[0]).vi, cell: r => fmt(qfv(r[0]).vi)},
+    ] : []),
+    ...(DATA.places && DATA.places.gap ? [
+      {label: "Median days to upload", cls: "num", key: r => (DATA.places.gap.by_user[r[0]] || [Infinity])[0],
+       cell: r => DATA.places.gap.by_user[r[0]] ? fmt(Math.round(DATA.places.gap.by_user[r[0]][0])) : "—"},
+    ] : []),
+    ...(DATA.views ? [
+      {label: "Views", cls: "num", key: r => (DATA.views.by_user[r[0]] || [0])[0], cell: r => fmt((DATA.views.by_user[r[0]] || [0])[0])},
+    ] : []),
+    {label: "Categories", cls: "num", key: r => r[8], cell: r => fmt(r[8])},
+  ];
+  const drawTable = () => {
+    const q = $("contribFilter").value.trim().toLowerCase();
+    const rows = q ? U.filter(u => u[0].toLowerCase().includes(q)) : U;
+    $("contribCount").textContent = q ? `${fmt(rows.length)} of ${fmt(U.length)}` : fmt(U.length);
+    sortTable("contribTable", leaderCols, rows, 25);
+  };
+  $("contribFilter").oninput = drawTable;
+  $("contribTable").onclick = (e) => {
+    const b = e.target.closest("[data-person]");
+    if (b) location.hash = "#/contributors?u=" + encodeURIComponent(b.dataset.person);
+  };
+  drawTable();
+
+  const visible = () => !$("page-contributors").hidden;
+  redrawOnResize.push(() => { if (visible()) { drawChart && drawChart(); drawPerson(); } });
+  window.addEventListener("hashchange", () => { if (visible()) setTimeout(() => { drawChart ? drawChart() : chart(); drawPerson(); }, 0); });
+  if (visible()) chart(); else drawChart = null;
+  // A link straight to someone (#/contributors?u=Name) is read before this data exists, so apply it here.
+  const q = location.hash.split("?")[1];
+  showPerson(q ? new URLSearchParams(q).get("u") : null);
+}
+
+// ---- Main page features (On-wiki usage page)
+function renderMainPage() {
+  const A = DATA.assessments;
+  if (!A || !A.days) return;
+  const mp = mainPageSummary(A);
+  $("mainPageSection").hidden = false;
+  $("mainPageCount").textContent = `${fmt(mp.files)} ${mp.files === 1 ? "file" : "files"}`;
+  $("mainPageNote").innerHTML = `Korikath files shown as picture or media of the day on a main page. <b>Commons</b> is checked exactly
+    (the file is linked from that day's Picture/Media of the Day template). <b>Other wikis</b> are recognised from the names of the
+    pages that use the file (for example "Template:Potd/…", "আজকের নির্বাচিত ছবি", "A nap képe"), so a wiki with an unusual name for
+    its picture of the day may be missed. Korikath's own categories are not used. <b>Times</b> counts every appearance: each
+    distinct day a file was on a wiki's main page (read from the page names; a wiki that only lists the month counts once per
+    month), so a file featured once on 10 wikis counts 10.`;
+  const commonsDays = mp.rows.reduce((n, r) => n + r.potdDays.length + r.motdDays.length, 0);
+  $("mainPageKpis").innerHTML =
+    kpi("Times on a main page", fmt(mp.times), null, false, "all files, all wikis") +
+    kpi("Files on a main page", fmt(mp.files)) +
+    kpi("Picture of the day", fmt(mp.potd), null, false, "files, any wiki") +
+    kpi("Media of the day", fmt(mp.motd), null, false, "files, any wiki") +
+    kpi("Wikis", fmt(mp.wikis)) +
+    kpi("Days on Commons' main page", fmt(commonsDays));
+  const days = (list) => list.length ? list.map(dayOnly).join(", ") : "—";
+  const dayOnly = (d) => { const [y, m, dd] = d.split("-").map(Number); return new Date(Date.UTC(y, m - 1, dd)).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric", timeZone: "UTC"}); };
+  const wikiList = (r) => [...r.wikis.entries()].map(([w, x]) => `${esc(wikiLabel(w))}${x.motd ? " (media)" : ""}`).join(", ") || "—";
+  sortTable("mainPageFiles", [
+    {label: "File", text: true, key: r => short(r.title), cell: r => link(r.title, short(r.title))},
+    {label: "Picture of the Day on Commons", key: r => r.potdDays.length ? Date.parse(r.potdDays[r.potdDays.length - 1]) : 0, cell: r => days(r.potdDays)},
+    {label: "Media of the Day on Commons", key: r => r.motdDays.length ? Date.parse(r.motdDays[r.motdDays.length - 1]) : 0, cell: r => days(r.motdDays)},
+    {label: "Other wikis", cls: "num", key: r => r.wikis.size, cell: r => fmt(r.wikis.size)},
+    {label: "Times", cls: "num", key: r => r.times, cell: r => fmt(r.times)},
+    {label: "Which", text: true, key: r => wikiList(r), cell: r => `<span class="sub">${wikiList(r)}</span>`},
+  ], mp.rows, 20, 4);
+  const byWiki = new Map();
+  for (const r of mp.rows) {
+    if (r.potdDays.length || r.motdDays.length) {
+      const w = byWiki.get("commons.wikimedia.org") || {files: 0, potd: 0, motd: 0, times: 0};
+      w.files++; w.potd += r.potdDays.length ? 1 : 0; w.motd += r.motdDays.length ? 1 : 0; w.times += r.commonsTimes;
+      byWiki.set("commons.wikimedia.org", w);
+    }
+    for (const [wk, x] of r.wikis) {
+      const w = byWiki.get(wk) || {files: 0, potd: 0, motd: 0, times: 0};
+      w.files++; w.potd += x.potd ? 1 : 0; w.motd += x.motd ? 1 : 0; w.times += x.times;
+      byWiki.set(wk, w);
+    }
+  }
+  // Every wiki that has featured Korikath media, most appearances first.
+  const listed = [...byWiki.entries()].sort((a, b) => b[1].times - a[1].times || wikiLabel(a[0]).localeCompare(wikiLabel(b[0])));
+  $("mainPageWikiList").innerHTML = `<b>Total ${fmt(listed.length)} ${listed.length === 1 ? "wiki" : "wikis"}</b> have featured Korikath media on their main page:<br>` +
+    listed.map(([w]) => `<a href="https://${esc(w)}/" target="_blank" rel="noopener">${esc(wikiLabel(w))}</a>`).join(", ");
+  sortTable("mainPageWikis", [
+    {label: "Wiki", text: true, key: r => wikiLabel(r[0]), cell: r => `<a href="https://${esc(r[0])}/" target="_blank" rel="noopener">${esc(wikiLabel(r[0]))}</a>`},
+    {label: "Files", cls: "num", key: r => r[1].files, cell: r => fmt(r[1].files)},
+    {label: "Picture of the day", cls: "num", key: r => r[1].potd, cell: r => fmt(r[1].potd)},
+    {label: "Media of the day", cls: "num", key: r => r[1].motd, cell: r => fmt(r[1].motd)},
+    {label: "Times", cls: "num", key: r => r[1].times, cell: r => fmt(r[1].times)},
+  ], [...byWiki.entries()], 15, 4);
+}
+
+const bytes = (b) => b >= 1e12 ? (b / 1e12).toFixed(2) + " TB" : b >= 1e9 ? (b / 1e9).toFixed(1) + " GB"
+  : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : Math.round(b / 1e3) + " KB";
+const daysText = (d) => d < 1 ? "same day" : d < 60 ? `${fmt(Math.round(d))} ${Math.round(d) === 1 ? "day" : "days"}`
+  : d < 730 ? `${(d / 30.44).toFixed(d < 365 ? 0 : 1)} months` : `${(d / 365.25).toFixed(1)} years`;
+
+// ---- Views page
+const bigNum = (n) => n >= 1e9 ? (n / 1e9).toFixed(2) + " billion" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 1 : 2) + " million" : fmt(n);
+const pct1 = (a, b) => b ? (100 * a / b).toFixed(a / b < 0.01 ? 2 : 1) + "%" : "—";
+function renderViews(V) {
+  if (!V) {
+    $("ncViews").textContent = "View counts are being collected.";
+    $("viewsBody").hidden = true;
+    $("viewsEmpty").innerHTML = `<div class="notice">View counts haven't been collected yet. The daily views job collects them.</div>`;
+    return;
+  }
+  const partial = V.with_history < V.files;
+  const monthName = (m) => new Date(+m.slice(0, 4), +m.slice(5) - 1, 1).toLocaleDateString("en-GB", {month: "long", year: "numeric"});
+  // Complete months: counted to the month's end for every file that has a history.
+  const complete = V.months.filter(r => r[3] >= V.with_history);
+  const lastMonth = complete[complete.length - 1];
+  $("ncViews").textContent = `${bigNum(V.all)} views${partial ? " so far" : ""} · ${pct1(V.human, V.all)} by people`;
+  $("viewsMeta").innerHTML = `How often Korikath files are loaded anywhere: in articles, on Commons, on other sites or opened directly,
+    thumbnails included, from Wikimedia's media request statistics (which start in January 2015). <b>Views by people</b> leaves out
+    automated traffic such as search-engine crawlers.` +
+    (partial ? ` <b>The history is still being collected: ${fmt(V.with_history)} of ${fmt(V.files)} files so far${V.running ? " (in progress)" : ""}.</b>` : "") +
+    ` Each day a thirtieth of the files is brought up to date, so every file is updated once a month.`;
+  $("viewsKpis").innerHTML =
+    kpi(partial ? "Views so far" : "All-time views", bigNum(V.all), null, false, fmt(V.all) + " in all") +
+    kpi("Views by people", bigNum(V.human), null, false, `${pct1(V.human, V.all)} of all views`) +
+    kpi("Automated views", bigNum(V.all - V.human), null, false, pct1(V.all - V.human, V.all)) +
+    (lastMonth ? kpi(`In ${monthName(lastMonth[0])}`, bigNum(lastMonth[1]), null, false, `${bigNum(lastMonth[2])} by people`) : "") +
+    kpi("Files counted", fmt(V.with_history), null, false, `of ${fmt(V.files)}`);
+
+  // Monthly chart: views per month (bars), or the all-time running total (a line). Hover for people
+  // and, for recent months, how many files have been counted so far.
+  const axis = (v) => v >= 1e6 ? (v / 1e6) + "M" : v >= 1e3 ? (v / 1e3) + "k" : v;
+  const monthPts = V.months.map(([m, a, h, n]) => ({date: new Date(+m.slice(0, 4), +m.slice(5) - 1, 1), v: a, h, n}));
+  let runAll = 0, runHuman = 0;
+  const totalPts = monthPts.map(d => ({...d, v: (runAll += d.v), h: (runHuman += d.h)}));
+  const partialNote = (d) => d.n < V.with_history ? ` · partial: ${pct1(d.n, V.with_history)} of files counted` : "";
+  let monthView = "monthly";
+  try { if (localStorage.getItem("viewsMonthView") === "total") monthView = "total"; } catch (e) {}
+  const drawMonths = () => {
+    $("viewsMonthSeg").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === monthView));
+    const draw = monthView === "total"
+      ? monthChart($("viewsMonthChart"), $("viewsMonthReadout"), totalPts, "step",
+          (d, f) => `<b>${fmt(d.v)}</b> views by the end of ${f(d.date)} · ${fmt(d.h)} by people`,
+          () => `<b>${fmt(runAll)}</b> views since ${monthPts.length ? monthName(V.months[0][0]) : "—"} · ${fmt(runHuman)} by people`, axis)
+      : monthChart($("viewsMonthChart"), $("viewsMonthReadout"), monthPts, "bars",
+          (d, f) => `<b>${fmt(d.v)}</b> views in ${f(d.date)} · ${fmt(d.h)} by people` + partialNote(d),
+          () => lastMonth ? `<b>${fmt(lastMonth[1])}</b> views in ${monthName(lastMonth[0])}, the last complete month` : "Hover a month for its views", axis);
+    draw();
+  };
+  $("viewsMonthSeg").querySelectorAll("button").forEach(b => b.onclick = () => {
+    monthView = b.dataset.view;
+    try { localStorage.setItem("viewsMonthView", monthView); } catch (e) {}
+    drawMonths();
+  });
+  $("viewsMonthNote").textContent = `The chart covers every month with views of the files counted so far, back to January 2015 when the
+    statistics begin. The latest months fill in over the 30-day update cycle; until then they show only the files counted so far.`;
+
+  // Daily chart, from the daily update cycle.
+  const days = V.daily.filter(r => r[3] > 0);
+  let drawDays = () => {};
+  if (days.length) {
+    const dayPts = days.map(([d, a, h, n]) => ({date: new Date(d + "T00:00:00"), v: a, h, n}));
+    drawDays = monthChart($("viewsDayChart"), $("viewsDayReadout"), dayPts, "bars",
+      (d) => `<b>${fmt(d.v)}</b> views on ${d.date.toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"})} · ${fmt(d.h)} by people · ${pct1(d.n, V.files)} of files counted`,
+      () => "Hover a day for its views", (v) => v >= 1e6 ? (v / 1e6) + "M" : v >= 1e3 ? (v / 1e3) + "k" : v, d3.timeDay);
+    $("viewsDayNote").textContent = `Per-day figures start with the daily update cycle. A day is complete once every file has been
+      brought up to date past it (up to 30 days later); the percentage on hover shows how far along it is.`;
+  } else {
+    $("viewsDaySection").hidden = true;
+  }
+
+  // Most viewed files
+  $("viewsFiles").innerHTML = V.top_files.slice(0, 24).map(([t, a, h, u]) => `<div class="card">
+    <a href="${pageUrl(t)}" target="_blank" rel="noopener">${thumb(t)}</a>
+    <div class="body"><div class="name">${link(t, short(t))}</div>
+      <div class="kv"><b>${fmt(a)}</b> views · ${fmt(h)} by people${u ? ` · by ${link("User:" + u, u)}` : ""}</div></div></div>`).join("");
+
+  const bar = (a, b) => `<div class="bar"><span style="width:${b ? Math.max(100 * a / b, 0.5) : 0}%"></span></div>`;
+  sortTable("viewsCats", [
+    {label: "Category", text: true, key: r => short(r[0]), cell: r => link(r[0], short(r[0]))},
+    {label: "Views", cls: "num", key: r => r[1], cell: r => fmt(r[1])},
+    {label: "By people", cls: "num", key: r => r[2], cell: r => fmt(r[2])},
+    {label: "Share", cls: "barcell", key: r => r[1], cell: r => `<span class="pct">${pct1(r[1], V.all)}</span>${bar(r[1], V.all)}`},
+    {label: "Files", cls: "num", key: r => r[3], cell: r => fmt(r[3])},
+  ], V.categories, 15);
+  const files = new Map((DATA.contributors ? DATA.contributors.users : []).map(u => [u[0], u[1]]));
+  sortTable("viewsUsers", [
+    {label: "Contributor", text: true, key: r => r[0], cell: r => `<a href="#/contributors?u=${encodeURIComponent(r[0])}">${esc(r[0])}</a>`},
+    {label: "Views", cls: "num", key: r => r[1][0], cell: r => fmt(r[1][0])},
+    {label: "By people", cls: "num", key: r => r[1][1], cell: r => fmt(r[1][1])},
+    {label: "Per file", cls: "num", key: r => files.get(r[0]) ? r[1][0] / files.get(r[0]) : 0,
+     cell: r => files.get(r[0]) ? fmt(Math.round(r[1][0] / files.get(r[0]))) : "—"},
+  ], Object.entries(V.by_user), 15);
+
+  const visible = () => !$("page-views").hidden;
+  redrawOnResize.push(() => { if (visible()) { drawMonths(); drawDays(); } });
+  window.addEventListener("hashchange", () => { if (visible()) setTimeout(() => { drawMonths(); drawDays(); }, 0); });
+  if (visible()) { drawMonths(); drawDays(); }
+}
+
+// ---- Map & devices page
+function renderPlaces(P) {
+  if (!P) {
+    $("ncPlaces").textContent = "Available after locations and cameras are looked up.";
+    $("placesBody").hidden = true;
+    $("placesEmpty").innerHTML = `<div class="notice">Locations and cameras haven't been looked up yet. They are fetched with the next crawl.</div>`;
+    return;
+  }
+  const pct = (a, b) => b ? (100 * a / b).toFixed(a / b < 0.01 ? 2 : 1) + "%" : "—";
+  const bar = (a, b) => `<div class="bar"><span style="width:${b ? Math.max(100 * a / b, 0.5) : 0}%"></span></div>`;
+  const withInfo = P.models.reduce((n, m) => n + m[3], 0);
+  const top = P.models[0];
+  $("ncPlaces").textContent = `${fmt(P.geocoded)} geocoded files (${pct(P.geocoded, P.files)})` + (top ? ` · most used device: ${top[0]}` : "");
+  $("placesMeta").innerHTML = `Locations and cameras of the ${fmt(P.files)} files in Korikath, from each file's Commons page and its own
+    metadata (EXIF). Locations are re-checked over a 30-day cycle, since one can be added to a file at any time.` +
+    (P.checked < P.files ? ` <b>${fmt(P.files - P.checked)} files haven't been looked up yet</b>; they follow with the next crawl.` : "");
+  $("placesKpis").innerHTML =
+    kpi("Geocoded files", fmt(P.geocoded), null, false, `${pct(P.geocoded, P.files)} of all files`) +
+    kpi("GPS in metadata, not geocoded", fmt(P.gps_only), null, false, "the camera recorded a position, but the file page has no location") +
+    kpi("Without a location", fmt(P.files - P.geocoded), null, false, pct(P.files - P.geocoded, P.files) + " of all files");
+  $("mapCount").textContent = fmt(P.geocoded);
+
+  // Devices
+  $("devicesMeta").textContent = `From the camera make and model each file's metadata records. ${fmt(P.no_device_info)} files have none
+    (scans, drawings, edited images whose metadata was removed, audio and video).`;
+  $("devicesKpis").innerHTML =
+    kpi("Files with camera info", fmt(withInfo), null, false, pct(withInfo, P.files) + " of all files") +
+    kpi("Different devices", fmt(P.models.length)) +
+    (top ? kpi("Most used device", esc(top[0]), null, false, `${fmt(top[3])} files · ${pct(top[3], withInfo)}`) : "");
+  const group = (i) => {
+    const m = new Map();
+    for (const r of P.models) {
+      const g = m.get(r[i]) || {files: 0, models: 0, people: 0};
+      g.files += r[3]; g.models++;
+      m.set(r[i], g);
+    }
+    return [...m.entries()];
+  };
+  const kindName = {camera: "Camera", phone: "Phone", drone: "Drone", "action camera": "Action camera", scanner: "Scanner", other: "Other"};
+  sortTable("devTypes", [
+    {label: "Type", text: true, key: r => r[0], cell: r => kindName[r[0]] || esc(r[0])},
+    {label: "Files", cls: "num", key: r => r[1].files, cell: r => fmt(r[1].files)},
+    {label: "Share", cls: "barcell", key: r => r[1].files, cell: r => `<span class="pct">${pct(r[1].files, withInfo)}</span>${bar(r[1].files, withInfo)}`},
+    {label: "Models", cls: "num", key: r => r[1].models, cell: r => fmt(r[1].models)},
+  ], group(2), 10);
+  sortTable("devBrands", [
+    {label: "Brand", text: true, key: r => r[0], cell: r => esc(r[0])},
+    {label: "Files", cls: "num", key: r => r[1].files, cell: r => fmt(r[1].files)},
+    {label: "Share", cls: "barcell", key: r => r[1].files, cell: r => `<span class="pct">${pct(r[1].files, withInfo)}</span>${bar(r[1].files, withInfo)}`},
+    {label: "Models", cls: "num", key: r => r[1].models, cell: r => fmt(r[1].models)},
+  ], group(1), 10);
+  // models: [device, brand, type, files, contributors]
+  const modelCols = [
+    {label: "Device", text: true, key: r => r[0], cell: r => esc(r[0])},
+    {label: "Brand", text: true, key: r => r[1], cell: r => esc(r[1])},
+    {label: "Type", text: true, key: r => r[2], cell: r => kindName[r[2]] || esc(r[2])},
+    {label: "Files", cls: "num", key: r => r[3], cell: r => fmt(r[3])},
+    {label: "Share", cls: "barcell", key: r => r[3], cell: r => `<span class="pct">${pct(r[3], withInfo)}</span>${bar(r[3], P.models[0] ? P.models[0][3] : 1)}`},
+    {label: "Contributors", cls: "num", key: r => r[4], cell: r => fmt(r[4])},
+  ];
+  const drawModels = () => {
+    const q = $("devFilter").value.trim().toLowerCase();
+    const rows = q ? P.models.filter(m => m[0].toLowerCase().includes(q)) : P.models;
+    $("devModelCount").textContent = q ? `${fmt(rows.length)} of ${fmt(P.models.length)}` : fmt(P.models.length);
+    sortTable("devModels", modelCols, rows, 25, 3);
+  };
+  $("devFilter").oninput = drawModels;
+  drawModels();
+  renderGap(P.gap);
+  renderSize(P.size);
+}
+
+function renderGap(G) {
+  if (!G) { $("gapSection").hidden = true; return; }
+  $("gapSection").hidden = false;
+  const pct = (a, b) => b ? (100 * a / b).toFixed(a / b < 0.01 ? 2 : 1) + "%" : "—";
+  const bar = (a, b) => `<div class="bar"><span style="width:${b ? Math.max(100 * a / b, 0.5) : 0}%"></span></div>`;
+  $("gapMeta").innerHTML = `The time between when a photo was taken (the date its camera recorded) and when it was uploaded (UTC), for
+    ${fmt(G.files)} photos with a recorded date. A day either way counts as the same day, since cameras keep local time.` +
+    (G.wrong_clock ? ` ${fmt(G.wrong_clock)} photos are left out because their camera's clock was wrong or never set (dated after their upload, or before 2005).` : "");
+  const sameWeek = G.groups.slice(0, 2).reduce((n, g) => n + g[1], 0);
+  const overYear = G.groups.slice(4).reduce((n, g) => n + g[1], 0);
+  $("gapKpis").innerHTML =
+    kpi("Typical wait", daysText(G.median), null, false, "median, from shot to upload") +
+    kpi("Uploaded within a week", pct(sameWeek, G.files), null, false, `${fmt(sameWeek)} photos`) +
+    kpi("Waited over a year", pct(overYear, G.files), null, false, `${fmt(overYear)} photos`) +
+    (G.oldest ? kpi("Oldest photo", dayOnly(G.oldest[1]), null, false, `${link(G.oldest[0], short(G.oldest[0]))}`) : "");
+  sortState.gapGroups = sortState.gapGroups || {col: 0, dir: 1};  // shortest wait first
+  sortTable("gapGroups", [
+    {label: "Waited", key: r => r[2], cell: r => r[0]},
+    {label: "Photos", cls: "num", key: r => r[1], cell: r => fmt(r[1])},
+    {label: "Share", cls: "barcell", key: r => r[1], cell: r => `<span class="pct">${pct(r[1], G.files)}</span>${bar(r[1], G.files)}`},
+  ], G.groups.map((g, i) => [...g, i]), 10, 0);
+  sortTable("gapYears", [
+    {label: "Uploaded in", key: r => r[0], cell: r => r[0]},
+    {label: "Typical wait", key: r => r[1], cell: r => daysText(r[1])},
+    {label: "Photos", cls: "num", key: r => r[2], cell: r => fmt(r[2])},
+  ], G.by_year, 20, 0);
+  sortTable("gapLongest", [
+    {label: "Photo", text: true, key: r => short(r[0]), cell: r => link(r[0], short(r[0]))},
+    {label: "Taken", key: r => Date.parse(r[1]), cell: r => dayOnly(r[1])},
+    {label: "Uploaded", key: r => Date.parse(r[2]), cell: r => dayOnly(r[2])},
+    {label: "Waited", cls: "num", key: r => r[3], cell: r => daysText(r[3])},
+  ], G.longest, 10, 3);
+}
+
+function renderSize(Z) {
+  if (!Z) { $("sizeSection").hidden = true; return; }
+  $("sizeSection").hidden = false;
+  const pct = (a, b) => b ? (100 * a / b).toFixed(a / b < 0.01 ? 2 : 1) + "%" : "—";
+  const bar = (a, b) => `<div class="bar"><span style="width:${b ? Math.max(100 * a / b, 0.5) : 0}%"></span></div>`;
+  $("sizeMeta").textContent = `The size of the current version of each of ${fmt(Z.files)} files (earlier versions of a file aren't counted).`;
+  $("sizeKpis").innerHTML =
+    kpi("Collection size", bytes(Z.total)) +
+    kpi("Average file", bytes(Z.total / Z.files)) +
+    kpi("Typical file", bytes(Z.median), null, false, "median") +
+    kpi("Largest file", bytes(Z.largest[0][1]), null, false, link(Z.largest[0][0], short(Z.largest[0][0])));
+  const kindName = {image: "Photos & images", video: "Video", audio: "Audio", document: "Documents", other: "Other"};
+  sortTable("sizeKinds", [
+    {label: "Kind", text: true, key: r => r[0], cell: r => kindName[r[0]] || esc(r[0])},
+    {label: "Files", cls: "num", key: r => r[1][0], cell: r => fmt(r[1][0])},
+    {label: "Size", cls: "num", key: r => r[1][1], cell: r => bytes(r[1][1])},
+    {label: "Share of size", cls: "barcell", key: r => r[1][1], cell: r => `<span class="pct">${pct(r[1][1], Z.total)}</span>${bar(r[1][1], Z.total)}`},
+  ], Object.entries(Z.by_kind), 10, 2);
+  sortTable("sizeLargest", [
+    {label: "File", text: true, key: r => short(r[0]), cell: r => link(r[0], short(r[0]))},
+    {label: "Size", cls: "num", key: r => r[1], cell: r => bytes(r[1])},
+  ], Z.largest, 10);
+}
+
+// The map loads Leaflet and the points file only when the page is first opened.
+let mapStarted = false;
+function loadAsset(tag, attrs) {
+  return new Promise((resolve, reject) => {
+    const el = document.createElement(tag);
+    Object.assign(el, attrs);
+    el.onload = resolve;
+    el.onerror = () => reject(new Error("couldn't load " + (attrs.src || attrs.href)));
+    document.head.appendChild(el);
+  });
+}
+async function startMap() {
+  if (mapStarted || !DATA.places) return;
+  mapStarted = true;
+  const host = $("map");
+  host.innerHTML = `<div class="empty" style="padding:14px">Loading the map…</div>`;
+  const cdn = "https://cdnjs.cloudflare.com/ajax/libs/";
+  try {
+    await Promise.all([
+      loadAsset("link", {rel: "stylesheet", href: cdn + "leaflet/1.9.4/leaflet.min.css"}),
+      loadAsset("link", {rel: "stylesheet", href: cdn + "leaflet.markercluster/1.5.3/MarkerCluster.min.css"}),
+      loadAsset("link", {rel: "stylesheet", href: cdn + "leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css"}),
+      loadAsset("script", {src: cdn + "leaflet/1.9.4/leaflet.min.js"}),
+    ]);
+    await Promise.all([
+      loadAsset("script", {src: cdn + "leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"}),
+      loadAsset("script", {src: "map_points.js?v=" + encodeURIComponent(DATA.generated_at)}),
+    ]);
+  } catch (e) {
+    host.innerHTML = `<div class="empty" style="padding:14px">The map couldn't load (${esc(e.message)}). It needs an internet connection.</div>`;
+    return;
+  }
+  host.innerHTML = "";
+  // OpenStreetMap's standard tiles (light use with attribution is fine under its tile policy; it asks for
+  // the page's address, which the dashboard server provides).
+  const map = L.map(host, {worldCopyJump: true});
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(map);
+  const points = window.MAP_POINTS || [];
+  const cluster = L.markerClusterGroup({chunkedLoading: true, showCoverageOnHover: false, maxClusterRadius: 50});
+  const markers = points.map(([lat, lon, name]) => {
+    const m = L.marker([lat, lon], {title: name});
+    m.bindPopup(() => {
+      const t = "File:" + name;
+      return `<div class="map-pop"><a href="${pageUrl(t)}" target="_blank" rel="noopener"><img src="${thumbUrl(t)}" alt="" loading="lazy"></a>
+        ${link(t, name)}<div class="sub">${lat.toFixed(5)}, ${lon.toFixed(5)}</div></div>`;
+    });
+    return m;
+  });
+  cluster.addLayers(markers);
+  map.addLayer(cluster);
+  if (markers.length) map.fitBounds(cluster.getBounds(), {padding: [20, 20], maxZoom: 12});
+  else map.setView([23.7, 90.4], 6);
+  window.addEventListener("hashchange", () => { if (!$("page-places").hidden) setTimeout(() => map.invalidateSize(), 0); });
+}
+
+// ---- Category tree tabs: each view is drawn the first time its tab is opened.
+function setupTabs(snap) {
+  const views = {map: renderSunburst, diagram: renderDendro, list: renderTree};
+  const drawn = {};
+  const tabs = [...document.querySelectorAll('.tabs [role="tab"]')];
+  $("treeCount").textContent = `${fmt(Object.keys(snap.categories).length)} categories`;
+  function select(name, focus) {
+    for (const t of tabs) {
+      const on = t.id === "tab-" + name;
+      t.setAttribute("aria-selected", on);
+      t.tabIndex = on ? 0 : -1;
+      $(t.getAttribute("aria-controls")).hidden = !on;
+      if (on && focus) t.focus();
+    }
+    if (!drawn[name]) { drawn[name] = true; views[name](snap); }
+    try { localStorage.setItem("treeTab", name); } catch (e) {}
+  }
+  tabs.forEach((t, i) => {
+    t.onclick = () => select(t.id.slice(4));
+    t.onkeydown = (e) => {
+      const k = {ArrowRight: 1, ArrowLeft: -1}[e.key];
+      if (k) select(tabs[(i + k + tabs.length) % tabs.length].id.slice(4), true);
+    };
+  });
+  let first = "map";
+  try { const saved = localStorage.getItem("treeTab"); if (saved in views) first = saved; } catch (e) {}
+  select(first);
+}
+
+// Home page: only the headline numbers. The latest crawl for the project size, the latest usage
+// check for on-wiki use; the details are on the Category changes and On-wiki usage pages.
+function renderHome(snap, rep) {
+  const latest = rep && rep.taken_at === snap.taken_at ? rep : null;
+  let cards = latest
+    ? kpi("Total files in project", fmt(latest.total_files), latest.total_files - latest.previous_total_files) +
+      kpi("Categories in tree", fmt(latest.total_categories), latest.total_categories - latest.previous_total_categories)
+    : kpi("Total files in project", fmt(snap.total_files)) + kpi("Categories in tree", fmt(snap.total_categories));
+  const M = DATA.media;
+  if (M) {
+    // Change since the previous crawl, once two crawls have recorded media counts.
+    const hm = (DATA.history || []).filter(h => h.media);
+    const nonImage = (m) => m.audio + m.video + m.document + m.other;
+    const delta = hm.length > 1 ? nonImage(hm[hm.length - 1].media) - nonImage(hm[hm.length - 2].media) : null;
+    const parts = [[M.audio, "audio"], [M.video, "video"], [M.document, M.document === 1 ? "document" : "documents"], [M.other, "other"]]
+      .filter(([n]) => n).map(([n, w]) => `${fmt(n)} ${w}`);
+    cards += kpi("Non-image files", fmt(nonImage(M)), delta, false, parts.join(" · ") || "none");
+  }
+  const A = DATA.assessments;
+  if (A) {
+    const h = A.history, now = h[h.length - 1], before = h.length > 1 ? h[h.length - 2] : null;
+    const moved = before ? [["qi", "quality"], ["fp", "featured"], ["vi", "valued"]]
+      .map(([k, w]) => [now[k] - before[k], w]).filter(([d]) => d).map(([d, w]) => `${d > 0 ? "+" : ""}${fmt(d)} ${w}`) : [];
+    const share = 100 * A.any / A.total_files;
+    cards += kpi("Quality · Featured · Valued",
+      `<span class="trio"><span>${fmt(A.counts.qi)}<small>quality</small></span><span>${fmt(A.counts.fp)}<small>featured</small></span><span>${fmt(A.counts.vi)}<small>valued</small></span>${A.counts.fm != null ? `<span>${fmt(A.counts.fm)}<small>featured media</small></span>` : ""}</span>`,
+      null, false, `${share.toFixed(share < 1 ? 2 : 1)}% of files have one` + (moved.length ? ` · ${moved.join(", ")} since previous check` : ""));
+    if (A.days) {
+      const mp = mainPageSummary(A);
+      cards += kpi("On the main page",
+        `<span class="trio"><span>${fmt(mp.potd)}<small>picture of the day</small></span><span>${fmt(mp.motd)}<small>media of the day</small></span></span>`,
+        null, false, `<b>${fmt(mp.times)} times</b> in all: ${fmt(mp.files)} ${mp.files === 1 ? "file" : "files"} on the main pages of ${fmt(mp.wikis)} ${mp.wikis === 1 ? "wiki" : "wikis"}`);
+    }
+  }
+  const V = DATA.views;
+  if (V) {
+    const partial = V.with_history < V.files;
+    cards += kpi(partial ? "Views so far" : "All-time views", bigNum(V.all), null, false,
+      `${bigNum(V.human)} by people (${pct1(V.human, V.all)})` + (partial ? ` · ${fmt(V.with_history)} of ${fmt(V.files)} files counted` : ""));
+  }
+  const Zs = DATA.places && DATA.places.size;
+  if (Zs) cards += kpi("Collection size", bytes(Zs.total), null, false, `average ${bytes(Zs.total / Zs.files)} per file`);
+  const P = DATA.places;
+  if (P) {
+    const share = P.files ? 100 * P.geocoded / P.files : 0;
+    cards += kpi("Geocoded files", fmt(P.geocoded), null, false,
+      `${share.toFixed(share < 1 ? 2 : 1)}% of files` + (P.gps_only ? ` · ${fmt(P.gps_only)} more have GPS in their metadata` : ""));
+  }
+  const U = DATA.usage;
+  if (U) {
+    const h = U.history, now = h[h.length - 1], before = h.length > 1 ? h[h.length - 2] : null;
+    const diff = (k) => before && before[k] != null && now[k] != null ? now[k] - before[k] : null;
+    const share = 100 * U.all.files_used / U.total_files;
+    cards +=
+      kpi("Files used on other wikis", fmt(U.all.files_used), diff("files_used"), false,
+        `${share.toFixed(share < 1 ? 2 : 1)}% of all files`, "since previous check") +
+      kpi("Pages using Korikath files", fmt(U.all.pages), diff("pages"), false,
+        `on ${fmt(U.all.wikis)} wikis · ${fmt(U.all.usages)} uses`, "since previous check");
+  }
+  const C = DATA.contributors;
+  if (C) {
+    const cutoff = Date.parse(snap.taken_at) - 30 * 864e5;
+    const fresh = C.users.filter(u => Date.parse(u[2]) >= cutoff).length;
+    cards += kpi("Contributors", fmt(C.users.length), null, false, `${fmt(fresh)} new in the last 30 days`);
+  }
+  $("kpis").innerHTML = cards;
+  renderAlerts(snap, latest);
+  const check = latest ? usageCheckFor(latest.taken_at) : null;
+  const usageText = check ? ` · usage: ${fmt(check.added_n)} added, ${fmt(check.removed_n)} removed` : "";
+  if (!latest) {
+    $("ncChanges").textContent = "Changes appear after the second crawl.";
+  } else {
+    const c = latest.changes;
+    const catChanges = c.categories_removed.length + c.categories_added.length + c.categories_moved.length + c.categories_renamed.length;
+    const parts = [[c.files_removed.length, "removed"], [c.files_added.length, "added"], [c.files_moved.length, "moved"],
+      [c.files_renamed.length, "renamed"], [catChanges, catChanges === 1 ? "category change" : "category changes"]]
+      .filter(([n]) => n).map(([n, w]) => `${fmt(n)} ${w}`);
+    $("ncChanges").textContent = (parts.length ? `Latest crawl: ${parts.join(" · ")}` : "No file or category changes in the latest crawl") + usageText;
+  }
+  $("ncCrawls").textContent = `Last crawl ${when(snap.taken_at)}. Start a crawl, see the schedule and all saved crawls.`;
+}
+
+// The assessment check that ran during a crawl.
+const assessCheckFor = (taken_at) => {
+  const A = DATA.assessments;
+  return A ? A.checks.find(c => Date.parse(c.taken_at) === Date.parse(taken_at)) || null : null;
+};
+const ASSESS_NAMES = {qi: "Quality image", fp: "Featured picture", vi: "Valued image", fm: "Featured media",
+  potd: "Picture of the Day on Commons", motd: "Media of the Day on Commons"};
+
+// Main-page features, Commons (exact, from the day templates) and other wikis (recognised from page
+// names in the usage data) together: {files, wikis, potd, motd, rows}. rows: one per file.
+function mainPageSummary(A) {
+  const per = new Map();
+  const row = (t) => per.get(t) || (per.set(t, {title: t, potdDays: [], motdDays: [], wikis: new Map()}), per.get(t));
+  for (const [t, days] of A.days.potd || []) row(t).potdDays.push(...days);
+  for (const [t, days] of A.days.motd || []) row(t).motdDays.push(...days);
+  for (const [t, wiki, kind, page, date] of A.elsewhere || []) {
+    const r = row(t), w = r.wikis.get(wiki) || {potd: false, motd: false, pages: [], dates: []};
+    w[kind] = true;
+    w.pages.push(page);
+    w.dates.push(date || "");
+    r.wikis.set(wiki, w);
+  }
+  const rows = [...per.values()];
+  // Times on a main page: Commons' exact days, plus for each other wiki its distinct days, each month
+  // without a day page once, and at least one (the same rule as appearances() in tracker.py).
+  const timesOn = (dates) => {
+    const days = new Set(dates.filter(d => d.length === 10));
+    const months = new Set(dates.filter(d => d.length === 7 && !days.has(d) && ![...days].some(x => x.startsWith(d))));
+    return Math.max(1, days.size + months.size);
+  };
+  for (const r of rows) {
+    r.commonsTimes = new Set([...r.potdDays, ...r.motdDays]).size;
+    for (const w of r.wikis.values()) w.times = timesOn(w.dates);
+    r.times = r.commonsTimes + [...r.wikis.values()].reduce((n, w) => n + w.times, 0);
+  }
+  const wikis = new Set((A.elsewhere || []).map(e => e[1]));
+  if (rows.some(r => r.potdDays.length || r.motdDays.length)) wikis.add("commons.wikimedia.org");
+  const isPotd = (r) => r.potdDays.length || [...r.wikis.values()].some(w => w.potd);
+  const isMotd = (r) => r.motdDays.length || [...r.wikis.values()].some(w => w.motd);
+  return {rows, files: rows.length, wikis: wikis.size, potd: rows.filter(isPotd).length, motd: rows.filter(isMotd).length,
+    times: rows.reduce((n, r) => n + r.times, 0)};
+}
+
+// The usage check that ran after a crawl: the first one at or after it, before the next crawl.
+function usageCheckFor(taken_at) {
+  const U = DATA.usage;
+  if (!U || !U.checks) return null;
+  const t = Date.parse(taken_at);
+  const later = (DATA.history || []).map(h => Date.parse(h.taken_at)).filter(x => x > t).sort((a, b) => a - b)[0] ?? Infinity;
+  return U.checks.find(c => Date.parse(c.checked_at) >= t && Date.parse(c.checked_at) < later) || null;
+}
+const wikiShort = (w) => w.replace(/^www\./, "").replace(/\.org$/, "");
+// Readable wiki name: "bn.wikipedia.org" -> "Bangla Wikipedia", "commons.wikimedia.org" -> "Wikimedia Commons".
+const SPECIAL_WIKIS = {"commons.wikimedia.org": "Wikimedia Commons", "meta.wikimedia.org": "Meta-Wiki",
+  "www.wikidata.org": "Wikidata", "species.wikimedia.org": "Wikispecies", "incubator.wikimedia.org": "Wikimedia Incubator",
+  "www.mediawiki.org": "MediaWiki.org", "wikisource.org": "Multilingual Wikisource", "outreach.wikimedia.org": "Wikimedia Outreach",
+  "wikimania.wikimedia.org": "Wikimania", "foundation.wikimedia.org": "Wikimedia Foundation"};
+const PROJECTS = {wikipedia: "Wikipedia", wiktionary: "Wiktionary", wikisource: "Wikisource", wikiquote: "Wikiquote",
+  wikibooks: "Wikibooks", wikinews: "Wikinews", wikiversity: "Wikiversity", wikivoyage: "Wikivoyage", wikimedia: "Wikimedia"};
+function wikiLabel(domain) {
+  if (SPECIAL_WIKIS[domain]) return SPECIAL_WIKIS[domain];
+  const [code, project] = domain.split(".");
+  const lang = code === "simple" ? "Simple English" : ((DATA.languages || {})[code] || code);
+  return `${lang} ${PROJECTS[project] || project}`;
+}
+// A usage log row: checked_at, change, file, file_url, wiki, namespace, page, page_url, uploader, changed_by,
+// changed_at_utc, how, edit_link
+const usageRowLinks = (r) => `<a href="${esc(r[3])}" target="_blank" rel="noopener">${esc(short(r[2]))}</a> on
+  ${esc(wikiShort(r[4]))}: <a href="${esc(r[7])}" target="_blank" rel="noopener">${esc(r[6])}</a>` +
+  (rowEdit(r) ? ` <span class="sub">·</span> ${editInfo(rowEdit(r), true)}` : "");
+
+// Red box on the home page: everything removed in the latest crawl and usage check, with links to act on.
+function renderAlerts(snap, latest) {
+  const groups = [];
+  const list = (items, more, n) => `<ul>${items.join("")}${n > items.length ? `<li><a class="more" href="#/changes">and ${fmt(n - items.length)} more →</a></li>` : ""}</ul>`;
+  if (latest) {
+    const c = latest.changes, gone = c.files_removed;
+    if (gone.length) {
+      const deleted = gone.filter(f => f.status === "deleted").length;
+      groups.push(`<div class="group"><div class="group-title">${fmt(gone.length)} ${gone.length === 1 ? "file" : "files"} left the project tree
+        <span class="sub">(${fmt(deleted)} deleted, ${fmt(gone.length - deleted)} moved outside)</span></div>` +
+        list(gone.slice(0, 5).map(f => `<li>${f.status === "deleted"
+          ? `${esc(short(f.title))}: deleted · <a href="${logUrl(f.title)}" target="_blank" rel="noopener">deletion log</a>`
+          : `${link(f.current_title || f.title, short(f.current_title || f.title))}: moved outside the tree`}
+          <span class="sub">(was in ${f.was_in.map(short).map(esc).join(", ")})</span>${f.status !== "deleted" && f.by ? ` · ${editInfo(f.by, true)}` : ""}</li>`), true, gone.length) +
+        `<div style="margin-top:6px"><button type="button" class="btn" onclick="goToRangeDownload('removed')">Download removed files…</button></div></div>`);
+    }
+    const cats = c.categories_removed;
+    if (cats.length) {
+      groups.push(`<div class="group"><div class="group-title">${fmt(cats.length)} ${cats.length === 1 ? "category" : "categories"} removed from the tree</div>` +
+        list(cats.slice(0, 5).map(x => `<li>${x.status === "deleted"
+          ? `${esc(short(x.title))}: deleted · <a href="${logUrl(x.title)}" target="_blank" rel="noopener">deletion log</a>`
+          : `${link(x.current_title || x.title, short(x.current_title || x.title))}: moved outside the tree`}
+          <span class="sub">(${fmt(x.files_lost)} files went with it)</span>${x.status !== "deleted" && x.by ? ` · ${editInfo(x.by, true)}` : ""}</li>`), true, cats.length) + `</div>`);
+    }
+  }
+  const U = DATA.usage, check = U && U.checks && U.checks.length ? U.checks[U.checks.length - 1] : null;
+  if (check && check.removed_n) {
+    groups.push(`<div class="group"><div class="group-title">${fmt(check.removed_n)} ${check.removed_n === 1 ? "use" : "uses"} of Korikath files removed from wikis</div>` +
+      list(check.removed.slice(0, 5).map(r => `<li>${usageRowLinks(r)}</li>`), true, check.removed_n) +
+      `<div style="margin-top:6px"><button type="button" class="btn" onclick="goToRangeDownload('usage')">Download usage changes…</button></div></div>`);
+  }
+  const ac = latest ? assessCheckFor(latest.taken_at) : null;
+  if (ac && ac.removed_n) {
+    groups.push(`<div class="group"><div class="group-title">${fmt(ac.removed_n)} quality, featured or valued ${ac.removed_n === 1 ? "status" : "statuses"} removed</div>` +
+      list(ac.removed.slice(0, 5).map(([k, , t]) => `<li>${link(t, short(t))}: no longer a ${ASSESS_NAMES[k].toLowerCase()}</li>`), true, ac.removed_n) + `</div>`);
+  }
+  const whenText = [latest ? `latest crawl ${when(latest.taken_at)}` : "", check ? `usage check ${when(check.checked_at)}` : ""].filter(Boolean).join(" · ");
+  if (groups.length) {
+    $("alerts").innerHTML = `<div class="alert" role="region" aria-label="Removals"><h2>Removed</h2>
+      <div class="when">${whenText}. <a href="#/changes">See all changes →</a></div>${groups.join("")}</div>`;
+  } else if (latest || check) {
+    $("alerts").innerHTML = `<div class="all-clear">✓ Nothing was removed in the ${whenText}.</div>`;
+  } else {
+    $("alerts").innerHTML = "";
+  }
+}
+
+function kpi(label, value, delta, invert, note, since = "since previous run") {
+  let d = "";
+  if (delta !== undefined && delta !== null) {
+    const cls = delta === 0 ? "flat" : ((delta > 0) !== !!invert ? "up" : "down");
+    d = `<div class="delta ${cls}">${delta > 0 ? "+" : ""}${fmt(delta)} ${since}</div>`;
+  }
+  const n = note ? `<div class="delta flat">${note}</div>` : "";
+  return `<div class="kpi"><div class="label">${label}</div><div class="value">${value}</div>${n}${d}</div>`;
+}
+
+function renderReport(rep, snap) {
+  const latest = !rep || rep.taken_at === snap.taken_at;
+  if (!rep) {
+    $("notice").innerHTML = `<div class="notice">There's only one crawl so far. Changes appear after the next crawl.</div>`;
+    $("changeKpis").innerHTML = "";
+    $("changes").innerHTML = "";
+    return;
+  }
+  $("notice").innerHTML = latest ? "" : `<div class="notice">Showing an older crawl (${when(rep.taken_at)}). The overview always shows the latest one.</div>`;
+  const c = rep.changes;
+  $("changeKpis").innerHTML =
+    kpi("Total files then", fmt(rep.total_files), rep.total_files - rep.previous_total_files) +
+    kpi("Categories in tree", fmt(rep.total_categories), rep.total_categories - rep.previous_total_categories) +
+    kpi("Files removed", fmt(c.files_removed.length)) +
+    kpi("Files added", fmt(c.files_added.length)) +
+    kpi("Files moved inside tree", fmt(c.files_moved.length)) +
+    kpi("Category changes", fmt(c.categories_removed.length + c.categories_added.length + c.categories_moved.length + c.categories_renamed.length));
+  const check = usageCheckFor(rep.taken_at);
+  if (check) {
+    $("changeKpis").innerHTML += kpi("File uses removed", fmt(check.removed_n)) + kpi("File uses added", fmt(check.added_n));
+  }
+
+  // Removals first, then everything else.
+  let h = "";
+  h += sectionRemovedFiles(c.files_removed);
+  h += sectionCategories(c);
+  const ac = assessCheckFor(rep.taken_at);
+  if (ac) $("changeKpis").innerHTML += kpi("New promotions", fmt(ac.promoted_n)) + kpi("Assessments removed", fmt(ac.removed_n));
+  h += sectionAssessments(ac, "removed");
+  h += sectionUsage(check, "removed");
+  h += sectionMovedFiles(c.files_moved);
+  h += sectionRenamed(c.files_renamed, "Renamed files");
+  h += sectionAdded(c.files_added);
+  h += sectionAssessments(ac, "promoted");
+  h += sectionUsage(check, "added");
+  $("changes").innerHTML = h;
+  wireRangeDownload("removed");
+  if (check) {
+    for (const kind of ["removed", "added"]) {
+      if (!check[kind].length) continue;
+      sortTable("chgUsage-" + kind, [
+        {label: "File", text: true, key: r => short(r[2]), cell: r => `<a href="${esc(r[3])}" target="_blank" rel="noopener">${esc(short(r[2]))}</a>`},
+        {label: "Wiki", text: true, key: r => wikiShort(r[4]), cell: r => esc(wikiShort(r[4]))},
+        {label: "Page", text: true, key: r => r[6], cell: r => `<a href="${esc(r[7])}" target="_blank" rel="noopener">${esc(r[6])}</a>`},
+        {label: "Uploader", text: true, key: r => r[8] || "", cell: r => r[8] ? link("User:" + r[8], r[8]) : "(unknown)"},
+        {label: "Changed by", text: true, key: r => r[9] || "~", cell: r => editInfo(rowEdit(r)) || `<span class="sub">—</span>`},
+      ], check[kind], 25, 0);
+    }
+  }
+}
+
+// Quality / featured / valued statuses gained or lost, found by the check that ran with the crawl.
+function sectionAssessments(ac, kind) {
+  if (!ac) return "";
+  const items = ac[kind], n = kind === "removed" ? ac.removed_n : ac.promoted_n;
+  if (kind === "removed" && !n) return "";
+  const title = kind === "removed" ? "Quality, featured or valued status removed" : "New quality, featured and valued images";
+  const body = n ? gridWithMore(items, ([k, , t]) => `<div class="card"><a href="${pageUrl(t)}" target="_blank" rel="noopener">${thumb(t)}</a>
+      <div class="body"><span><span class="badge ${kind === "removed" ? "deleted" : "added"}">${kind === "removed" ? "No longer" : "New"}: ${ASSESS_NAMES[k]}</span></span>
+      <div class="name">${link(t, short(t))}</div></div></div>`, 24)
+    : `<div class="empty">No new quality, featured or valued images in this crawl.</div>`;
+  return `<section class="${kind === "removed" ? "removal" : ""}">${head(title, n, kind === "removed" ? "bad" : "good")}${body}</section>`;
+}
+
+// File-usage changes found by the usage check that ran after the crawl.
+function sectionUsage(check, kind) {
+  const title = kind === "removed" ? "File uses removed from wikis" : "File uses added on wikis";
+  if (!check) {
+    return kind === "removed" ? `<section>${head(title, 0)}<div class="empty">No on-wiki usage check ran after this crawl.
+      The scheduled crawls run one; you can also start one on the <a href="#/crawls">Crawls</a> page.</div></section>` : "";
+  }
+  const n = kind === "removed" ? check.removed_n : check.added_n;
+  const cls = kind === "removed" && n ? "removal" : "";
+  const shown = check[kind].length;
+  const body = n
+    ? `<p class="sub" style="margin:-6px 0 10px">From the usage check of ${when(check.checked_at)}.${shown < n ? ` The first ${fmt(shown)} are listed; the full list is in the change log on the <a href="#/usage">On-wiki usage</a> page.` : ""}</p>
+       <div class="scroll"><table id="chgUsage-${kind}"></table></div>`
+    : `<div class="empty">No file uses were ${kind} on other wikis (usage check of ${when(check.checked_at)}).</div>`;
+  return `<section class="${cls}">${head(title, n, kind === "removed" ? "bad" : "good")}${body}</section>`;
+}
+
+function head(title, n, cls) {
+  return `<h2>${title} <span class="count ${n ? cls : ""}">${fmt(n)}</span></h2>`;
+}
+
+function sectionRemovedFiles(list) {
+  let body;
+  if (!list.length) body = `<div class="empty">No files left the project tree in this run.</div>`;
+  else body = gridWithMore(list, f => {
+    const deleted = f.status === "deleted";
+    const where = deleted
+      ? `<div class="kv">${f.deletion ? `Deleted ${when(f.deletion.timestamp)} by <b>${esc(f.deletion.user)}</b>${f.deletion.comment ? `: ${esc(f.deletion.comment)}` : ""}` : "Deleted"} · <a href="${logUrl(f.title)}" target="_blank" rel="noopener">log</a></div>`
+      : `<div class="kv">Now in:</div>${catChips(f.current_categories)}${f.by ? `<div class="kv" style="margin-top:4px">${editInfo(f.by)}</div>` : ""}`;
+    const t = f.current_title || f.title;
+    return `<div class="card">${deleted ? thumb(t, true) : `<a href="${pageUrl(t)}" target="_blank" rel="noopener">${thumb(t)}</a>`}
+      <div class="body">
+        <span><span class="badge ${f.status || "moved_out"}">${deleted ? "Deleted" : "Moved outside"}</span></span>
+        <div class="name">${deleted ? esc(short(f.title)) : link(t, short(t))}</div>
+        <div class="kv">Was in:</div>${catChips(f.was_in, "minus")}
+        ${where}
+      </div></div>`;
+  }, 60);
+  return `<section class="${list.length ? "removal" : ""}">${head("Files removed from the project tree", list.length, "bad")}
+    ${rangePanel("removed")}${body}</section>`;
+}
+
+// Download of removed files for a chosen date range (UTC days on which a crawl found them). Built in the
+// browser from the removal records tracker.py includes, so it also works with the page opened from disk.
+const UTC_DAY = new Intl.DateTimeFormat("en-CA", {timeZone: "UTC", year: "numeric", month: "2-digit", day: "2-digit"});
+const utcDay = (t) => UTC_DAY.format(new Date(t));  // "2026-10-26"
+const csvCell = (v) => { const s = String(v ?? ""); return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+// Date-range download panels. Each has its records ({columns, rows, found}: found = exact time each row was
+// found), a title and a file name; the same panel serves removed files and on-wiki usage changes.
+const RANGE_DOWNLOADS = {
+  removed: {title: "Download removed files", file: "korikath_removed_files", noun: ["file", "files"],
+            data: () => DATA.removed_files, page: "#/changes"},
+  usage: {title: "Download usage changes", file: "korikath_usage_changes", noun: ["change", "changes"],
+          data: () => DATA.usage && DATA.usage.log, page: "#/usage"},
+};
+function rangePanel(key) {
+  const D = RANGE_DOWNLOADS[key], R = D.data() || {rows: [], found: []};
+  const times = R.found.filter(Boolean);
+  const today = utcDay(Date.now());
+  const first = times.length ? utcDay(times[0]) : today;
+  return `<div class="dl-panel" id="${key}Panel">
+    <b>${D.title}</b>
+    <label>From <input type="date" id="${key}From" value="${first}" max="${today}"></label>
+    <label>To <input type="date" id="${key}To" value="${today}" max="${today}"></label>
+    <div class="seg" role="group" aria-label="Quick ranges">
+      <button type="button" data-days="7">Last 7 days</button><button type="button" data-days="30">Last 30 days</button><button type="button" data-days="all">All time</button>
+    </div>
+    <button type="button" class="btn primary" id="${key}Download">Download CSV</button>
+    <span class="sub" id="${key}Count" aria-live="polite"></span>
+  </div>`;
+}
+function wireRangeDownload(key) {
+  const from = $(key + "From"), to = $(key + "To");
+  if (!from) return;
+  const D = RANGE_DOWNLOADS[key], R = D.data() || {columns: [], rows: [], found: []};
+  const times = R.found.filter(Boolean);
+  const first = times.length ? utcDay(times[0]) : utcDay(Date.now());
+  const inRange = () => R.rows.filter((r, i) => { const d = R.found[i] && utcDay(R.found[i]); return d && d >= from.value && d <= to.value; });
+  const update = () => {
+    const ok = from.value && to.value && from.value <= to.value;
+    const n = ok ? inRange().length : 0;
+    $(key + "Count").textContent = !ok ? "Choose a start date on or before the end date."
+      : `${fmt(n)} ${n === 1 ? D.noun[0] : D.noun[1]} found in this range · ${fmt(R.rows.length)} in all`;
+    $(key + "Download").disabled = !ok;
+  };
+  from.oninput = to.oninput = update;
+  $(key + "Panel").querySelectorAll("[data-days]").forEach(b => b.onclick = () => {
+    to.value = utcDay(Date.now());
+    from.value = b.dataset.days === "all" ? first : utcDay(Date.now() - (+b.dataset.days - 1) * 864e5);
+    update();
+  });
+  $(key + "Download").onclick = () => {
+    const rows = inRange();
+    const csv = "﻿" + [R.columns, ...rows].map(r => r.map(csvCell).join(",")).join("\r\n");  // BOM: Bengali shows in Excel
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {timeZone: "UTC", year: "numeric", month: "2-digit",
+      day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false}).formatToParts(new Date()).map(x => [x.type, x.value]));
+    const stamp = `${p.year}-${p.month}-${p.day}_${p.hour}${p.minute}Z`;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"}));
+    a.download = `${D.file}_${from.value}_to_${to.value}_downloaded_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  };
+  update();
+}
+// From the home page's red box: open the page with that panel and put the cursor in it.
+function goToRangeDownload(key) {
+  location.hash = RANGE_DOWNLOADS[key].page;
+  setTimeout(() => { const p = $(key + "Panel"); if (p) { p.scrollIntoView({block: "center"}); $(key + "From").focus(); } }, 150);
+}
+
+
+function sectionCategories(c) {
+  const rows = [];
+  c.categories_removed.forEach(x => rows.push(`<tr><td><span class="badge ${x.status || "moved_out"}">${x.status === "deleted" ? "Deleted" : "Moved outside"}</span></td>
+    <td>${x.status === "deleted" ? `${esc(x.title)} · <a href="${logUrl(x.title)}" target="_blank" rel="noopener">log</a>` : link(x.current_title || x.title)}</td>
+    <td>Was under ${catChips(x.was_under, "minus")}${x.status !== "deleted" ? `<div class="kv" style="margin-top:4px">Now under</div>${catChips(x.current_categories)}` : ""}</td>
+    <td class="num">${fmt(x.files_lost)}</td><td>${editsCell(x)}</td></tr>`));
+  c.categories_moved.forEach(x => rows.push(`<tr><td><span class="badge moved_out">Moved inside</span></td><td>${link(x.title)}</td>
+    <td>${x.removed_from.length ? `From ${catChips(x.removed_from, "minus")}` : ""}${x.added_to.length ? `<div style="margin-top:4px">To ${catChips(x.added_to, "plus")}</div>` : ""}</td><td class="num"></td><td>${editsCell(x)}</td></tr>`));
+  c.categories_renamed.forEach(x => rows.push(`<tr><td><span class="badge moved_out">Renamed</span></td><td>${link(x.title)}</td>
+    <td>Was <i>${esc(x.old_title)}</i></td><td class="num"></td><td>${editsCell(x)}</td></tr>`));
+  c.categories_added.forEach(x => rows.push(`<tr><td><span class="badge added">Added</span></td><td>${link(x.title)}</td>
+    <td>Under ${catChips(x.now_under, "plus")}</td><td class="num"></td><td>${editsCell(x)}</td></tr>`));
+  const n = rows.length;
+  const body = n ? `<div class="scroll"><table><tr><th>Change</th><th>Category</th><th>Where</th><th class="num">Files lost</th><th>Changed by</th></tr>${rows.join("")}</table></div>`
+    : `<div class="empty">No categories were added, removed, moved or renamed.</div>`;
+  return `<section class="${c.categories_removed.length ? "removal" : ""}">${head("Category changes", n, c.categories_removed.length ? "bad" : "")}${body}</section>`;
+}
+
+function sectionMovedFiles(list) {
+  const body = list.length ? `<div class="scroll"><table><tr><th>File</th><th>Removed from</th><th>Added to</th><th>Changed by</th></tr>${list.map(f =>
+    `<tr><td>${link(f.title, short(f.title))}</td><td>${catChips(f.removed_from, "minus")}</td><td>${catChips(f.added_to, "plus")}</td><td>${editsCell(f)}</td></tr>`).join("")}</table></div>`
+    : `<div class="empty">No files changed category inside the tree.</div>`;
+  return `<section>${head("Files moved inside the tree", list.length)}${body}</section>`;
+}
+
+function sectionRenamed(list, title) {
+  if (!list.length) return "";
+  return `<section>${head(title, list.length)}<div class="scroll"><table><tr><th>Now</th><th>Was</th><th>Renamed by</th></tr>${list.map(f =>
+    `<tr><td>${link(f.title, short(f.title))}</td><td>${esc(short(f.old_title))}</td><td>${editsCell(f)}</td></tr>`).join("")}</table></div></section>`;
+}
+
+function sectionAdded(list) {
+  if (!list.length) return `<section>${head("Files added", 0)}<div class="empty">No new files.</div></section>`;
+  const card = f => `<div class="card"><a href="${pageUrl(f.title)}" target="_blank" rel="noopener">${thumb(f.title)}</a>
+    <div class="body"><div class="name">${link(f.title, short(f.title))}</div>${catChips(f.now_in, "plus")}${f.by || f.by_category ? `<div class="kv" style="margin-top:4px">${editsCell(f)}</div>` : ""}</div></div>`;
+  return `<section>${head("Files added", list.length, "good")}${gridWithMore(list, card, 24)}</section>`;
+}
+
+// Cards for the first `n` items; the rest are built only when "Show more" is opened,
+// so a run where thousands of files changed doesn't load thousands of thumbnails.
+function gridWithMore(list, card, n) {
+  const rest = list.slice(n);
+  const id = "more" + Math.random().toString(36).slice(2);
+  if (rest.length) MORE[id] = () => rest.map(card).join("");
+  return `<div class="grid">${list.slice(0, n).map(card).join("")}</div>` + (rest.length
+    ? `<details data-more="${id}"><summary>Show ${fmt(rest.length)} more</summary><div class="grid" style="margin-top:12px"></div></details>` : "");
+}
+const MORE = {};
+document.addEventListener("toggle", (e) => {
+  const d = e.target, id = d.dataset && d.dataset.more;
+  if (d.open && id && MORE[id]) { d.querySelector(".grid").innerHTML = MORE[id](); delete MORE[id]; }
+}, true);
+
+function renderHistory(hist) {
+  const dur = (sec) => sec ? `${Math.floor(sec / 60)} min ${sec % 60} s` : "—";
+  const size = (b) => b == null ? "deleted" : b >= 1e6 ? `${(b / 1e6).toFixed(1)} MB` : `${Math.round(b / 1e3)} KB`;
+  $("savedCount").textContent = `${fmt(hist.length)} on this PC`;
+  const rows = hist.slice().reverse().map((h, i) => {
+    const c = h.counts || {};
+    return `<tr${i >= 10 ? ' class="older" hidden' : ""}><td>${whenShort(h.taken_at)}</td>
+      <td>${h.mode === "quick" ? "Quick check" : "Full crawl"}</td>
+      <td class="num">${fmt(h.total_files)}</td><td class="num">${fmt(h.total_categories)}</td>
+      <td class="num">${h.counts ? fmt(c.files_removed) : "first crawl"}</td><td class="num">${h.counts ? fmt(c.files_added) : ""}</td>
+      <td class="num">${h.counts ? fmt(c.files_moved) : ""}</td>
+      <td class="num">${h.counts ? fmt(c.categories_removed + c.categories_added + c.categories_moved + c.categories_renamed) : ""}</td>
+      <td class="num">${dur(h.seconds)}</td><td class="num">${size(h.size)}</td></tr>`;
+  });
+  $("historyTable").innerHTML = `<tr><th>Crawl (UTC)</th><th>Type</th><th class="num">Files</th><th class="num">Categories</th>
+    <th class="num">Removed</th><th class="num">Added</th><th class="num">Moved</th><th class="num">Category changes</th>
+    <th class="num">Took</th><th class="num">Saved size</th></tr>${rows.join("")}`;
+  if (hist.length > 10) {
+    const more = document.createElement("button");
+    more.className = "btn";
+    more.style.marginTop = "8px";
+    more.textContent = `Show all ${fmt(hist.length)} crawls`;
+    more.onclick = () => { $("historyTable").querySelectorAll("tr.older").forEach(r => r.hidden = false); more.remove(); };
+    $("historyTable").parentElement.after(more);
+  }
+  const svg = $("spark");
+  if (hist.length < 2) { svg.style.display = "none"; return; }
+  const W = 1000, H = 60, vals = hist.map(h => h.total_files);
+  const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+  const pts = vals.map((v, i) => [i / (vals.length - 1) * W, H - 6 - (v - lo) / span * (H - 12)]);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = `<polyline fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"
+    points="${pts.map(p => p.join(",")).join(" ")}"/>` +
+    pts.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="var(--accent)"><title>${when(hist[i].taken_at)}: ${fmt(vals[i])} files</title></circle>`).join("");
+}
+
+function renderTree(snap) {
+  const cats = snap.categories;
+  const children = {};
+  let rootId = null;
+  for (const [id, c] of Object.entries(cats)) {
+    if (c.depth === 0) rootId = id;
+    for (const p of c.parents) (children[p] ||= []).push(id);
+  }
+  for (const k in children) children[k].sort((a, b) => cats[a].title.localeCompare(cats[b].title));
+
+  function node(id, path) {
+    const c = cats[id], kids = (children[id] || []).filter(k => !path.has(k));
+    const open = c.depth < 1;
+    const p2 = new Set(path).add(id);
+    return `<li data-title="${esc(c.title.toLowerCase())}">
+      <div class="node"><span class="toggle">${kids.length ? (open ? "▾" : "▸") : ""}</span>${link(c.title, short(c.title))}
+      <span class="n">${fmt(c.direct)} direct · ${fmt(c.total)} total</span></div>
+      ${kids.length ? `<ul${open ? "" : ' hidden'}>${kids.map(k => node(k, p2)).join("")}</ul>` : ""}</li>`;
+  }
+  const tree = $("tree");
+  tree.innerHTML = `<ul>${node(rootId, new Set())}</ul>`;
+  tree.onclick = (e) => {
+    const t = e.target.closest(".toggle");
+    if (!t || !t.textContent) return;
+    const ul = t.closest("li").querySelector(":scope > ul");
+    ul.hidden = !ul.hidden;
+    t.textContent = ul.hidden ? "▸" : "▾";
+  };
+  $("treeSearch").oninput = (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    tree.querySelectorAll("li").forEach(li => li.classList.remove("hl"));
+    if (!q) return;
+    tree.querySelectorAll("li").forEach(li => {
+      if (!li.dataset.title.includes(q)) return;
+      li.classList.add("hl");
+      let p = li.parentElement;
+      while (p && p !== tree) {
+        if (p.tagName === "UL") { p.hidden = false; const tg = p.parentElement.querySelector(":scope > .node .toggle"); if (tg) tg.textContent = "▾"; }
+        p = p.parentElement;
+      }
+    });
+  };
+}
+
+// ---- Zoomable sunburst of the category tree (after the classic d3 zoomable sunburst)
+function renderSunburst(snap) {
+  const host = $("sunburst");
+  if (!window.d3) {
+    host.innerHTML = `<div class="empty">The tree map needs an internet connection to load its drawing library. Reopen the page when you're online.</div>`;
+    return;
+  }
+  const cats = snap.categories, kids = {};
+  let rootId = null;
+  for (const [id, c] of Object.entries(cats)) {
+    if (c.depth === 0) rootId = id;
+    else (kids[c.parents[0]] ||= []).push(id);  // parents[0] is the parent it was first found under
+  }
+  // wf/wc: what a node adds to its own slice when sizing by files / by subcategories. A category with both
+  // subcategories and its own files gets a grey "filed directly here" child, so its ring has no empty gap.
+  const build = (id) => {
+    const c = cats[id], children = (kids[id] || []).map(build);
+    const node = {id, ...c, children, wf: c.direct, wc: c.depth === 0 ? 0 : 1};
+    if (children.length && c.direct) {
+      node.wf = 0;
+      children.push({id: id + ":own", own: true, title: c.title, direct: c.direct, total: c.direct,
+        depth: c.depth + 1, parents: [id], children: [], wf: c.direct, wc: 0});
+    }
+    return node;
+  };
+  const data = build(rootId);
+  const label = (t) => short(t).replace(/^Project Korikath[-\s]*/i, "") || short(t);
+  const trunc = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;
+
+  let mode = "files";
+  document.querySelectorAll("#panel-map .seg button").forEach(b => b.onclick = () => {
+    mode = b.dataset.mode;
+    document.querySelectorAll("#panel-map .seg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    draw();
+  });
+
+  const width = 640, radius = width / 6;
+  const arc = d3.arc().startAngle(d => d.x0).endAngle(d => d.x1)
+    .padAngle(d => Math.min((d.x1 - d.x0) / 2, 0.004)).padRadius(radius * 1.5)
+    .innerRadius(d => d.y0 * radius).outerRadius(d => Math.max(d.y0 * radius, d.y1 * radius - 1));
+  const arcVisible = (d) => d.y1 <= 3 && d.y0 >= 1 && d.x1 > d.x0;
+  const labelVisible = (d) => d.y1 <= 3 && d.y0 >= 1 && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.04;
+  const labelTransform = (d) => {
+    const x = (d.x0 + d.x1) / 2 * 180 / Math.PI, y = (d.y0 + d.y1) / 2 * radius;
+    return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
+  };
+
+  function draw() {
+    host.innerHTML = "";
+    const h = d3.hierarchy(data)
+      .sum(d => mode === "files" ? d.wf : d.wc)
+      .sort((a, b) => b.value - a.value);
+    const root = d3.partition().size([2 * Math.PI, h.height + 1])(h);
+    root.each(d => d.current = d);
+    const tops = root.children || [];
+    // Distinct hues in size order, so the biggest neighbouring branches never look alike.
+    const PALETTE = ["#4e79a7", "#f28e2b", "#59a14f", "#e15759", "#76b7b2", "#edc948", "#b07aa1", "#ff9da7",
+      "#9c755f", "#86bcb6", "#d4a6c8", "#a0cbe8", "#ffbe7d", "#8cd17d", "#f1ce63", "#bab0ac"];
+    const color = d3.scaleOrdinal(tops.map(d => d.data.id), PALETTE);
+    const OWN_COLOR = "#c9c4b8";
+    const branchColor = (d) => {
+      if (d.data.own) return OWN_COLOR;
+      let top = d;
+      while (top.depth > 1) top = top.parent;
+      if (d.depth === 1) return color(top.data.id);
+      // Deeper levels: lighter per level, alternating shade between siblings so neighbours stay apart.
+      const k = Math.min(0.12 * (d.depth - 1) + (d.parent.children.indexOf(d) % 2) * 0.12, 0.6);
+      return d3.interpolateRgb(color(top.data.id), "#ffffff")(k);
+    };
+    const opacity = (d) => arcVisible(d) ? (d.children ? 0.9 : 0.65) : 0;
+    const unit = mode === "files" ? "files" : "categories";
+
+    const svg = d3.select(host).append("svg").attr("viewBox", [-width / 2, -width / 2, width, width])
+      .attr("role", "img").attr("aria-label", "Sunburst chart of the category tree");
+    const path = svg.append("g").selectAll("path").data(root.descendants().slice(1)).join("path")
+      .attr("fill", branchColor)
+      .attr("fill-opacity", d => opacity(d.current))
+      .attr("pointer-events", d => arcVisible(d.current) ? "auto" : "none")
+      .attr("d", d => arc(d.current));
+    path.filter(d => d.children).style("cursor", "pointer").on("click", clicked);
+    path.on("mouseenter", (e, d) => info(d)).on("mouseleave", () => info(focus));
+
+    const text = svg.append("g").attr("pointer-events", "none").attr("text-anchor", "middle")
+      .style("user-select", "none").selectAll("text").data(root.descendants().slice(1)).join("text")
+      .attr("dy", "0.35em")
+      .attr("fill-opacity", d => +labelVisible(d.current))
+      .attr("transform", d => labelTransform(d.current))
+      .text(d => d.data.own ? "filed directly" : trunc(label(d.data.title), 17));
+
+    const center = svg.append("circle").datum(root).attr("r", radius).attr("fill", "transparent")
+      .attr("pointer-events", "all").style("cursor", "pointer").on("click", (e, p) => clicked(e, p));
+    const cTitle = svg.append("text").attr("class", "center-title").attr("text-anchor", "middle").attr("dy", "-0.2em").attr("pointer-events", "none");
+    const cSub = svg.append("text").attr("class", "center-sub").attr("text-anchor", "middle").attr("dy", "1.3em").attr("pointer-events", "none");
+
+    let focus = root;
+    function setCenter(p) {
+      cTitle.text(trunc(p === root ? short(p.data.title) : label(p.data.title), 20));
+      const n = mode === "files" ? p.data.total : p.descendants().filter(x => !x.data.own).length - 1;  // unique files / subcategories below
+      cSub.text(`${fmt(n)} ${mode === "files" ? "files" : "subcategories"}${p !== root ? " · click to go up" : ""}`);
+    }
+
+    function info(d) {
+      const c = d.data, sub = d.descendants().filter(x => !x.data.own).length - 1;
+      const share = d.parent ? d.value / d.parent.value : 1;
+      if (c.own) {
+        $("sbInfo").innerHTML = `<div class="t">Files filed directly in ${link(c.title, short(c.title))}</div>
+          <dl><dt>Files</dt><dd>${fmt(c.direct)}</dd></dl>
+          <div class="hint">${(share * 100).toFixed(1)}% of ${esc(label(c.title))} by files: these sit in the category
+            itself, not in one of its subcategories.</div>`;
+        return;
+      }
+      $("sbInfo").innerHTML = `<div class="t">${link(c.title, short(c.title))}</div>
+        <dl>
+          <dt>Unique files below</dt><dd>${fmt(c.total)}</dd>
+          <dt>Filed directly here</dt><dd>${fmt(c.direct)}</dd>
+          <dt>Subcategories below</dt><dd>${fmt(sub)}</dd>
+          <dt>Level</dt><dd>${c.depth === 0 ? "mother category" : c.depth}</dd>
+        </dl>
+        ${d.parent ? `<div class="hint">${(share * 100).toFixed(share < 0.01 ? 2 : 1)}% of
+          ${esc(label(d.parent.data.title))} by ${unit}</div><div class="bar"><span style="width:${Math.max(share * 100, 0.5)}%;background:${branchColor(d)}"></span></div>` : ""}
+        ${c.parents.length > 1 ? `<div class="hint">Also filed under ${c.parents.length - 1} other ${c.parents.length > 2 ? "categories" : "category"} in the tree.</div>` : ""}
+        <div class="hint">${d === focus ? "Hover a slice for details." : d.children ? "Click to zoom into this cluster." : "No subcategories."}</div>`;
+    }
+
+    function crumbs(p) {
+      const chain = p.ancestors().reverse();
+      $("crumbs").innerHTML = chain.length > 1 ? chain.map((a, i) => i === chain.length - 1
+        ? `<span>${esc(label(a.data.title))}</span>`
+        : `<button type="button" data-i="${i}">${esc(i === 0 ? short(a.data.title) : label(a.data.title))}</button> ›`).join(" ") : "";
+      $("crumbs").querySelectorAll("button").forEach(b => b.onclick = (e) => clicked(e, chain[+b.dataset.i]));
+    }
+
+    function clicked(event, p) {
+      if (!p) return;
+      focus = p;
+      center.datum(p.parent || root);
+      root.each(d => d.target = {
+        x0: Math.max(0, Math.min(1, (d.x0 - p.x0) / (p.x1 - p.x0))) * 2 * Math.PI,
+        x1: Math.max(0, Math.min(1, (d.x1 - p.x0) / (p.x1 - p.x0))) * 2 * Math.PI,
+        y0: Math.max(0, d.y0 - p.depth),
+        y1: Math.max(0, d.y1 - p.depth),
+      });
+      const t = svg.transition().duration(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 650);
+      path.transition(t)
+        .tween("data", d => { const i = d3.interpolate(d.current, d.target); return (k) => d.current = i(k); })
+        .filter(function (d) { return +this.getAttribute("fill-opacity") || arcVisible(d.target); })
+        .attr("fill-opacity", d => opacity(d.target))
+        .attr("pointer-events", d => arcVisible(d.target) ? "auto" : "none")
+        .attrTween("d", d => () => arc(d.current));
+      text.filter(function (d) { return +this.getAttribute("fill-opacity") || labelVisible(d.target); }).transition(t)
+        .attr("fill-opacity", d => +labelVisible(d.target))
+        .attrTween("transform", d => () => labelTransform(d.current));
+      setCenter(p);
+      crumbs(p);
+      info(p);
+    }
+
+    setCenter(root);
+    crumbs(root);
+    info(root);
+  }
+  draw();
+}
+
+// ---- Expandable tree diagram (the style of osintframework.com: a d3 collapsible tree)
+function renderDendro(snap) {
+  const host = $("dendro");
+  if (!window.d3) {
+    host.innerHTML = `<div class="empty" style="padding:14px">The tree diagram needs an internet connection to load its drawing library. Reopen the page when you're online.</div>`;
+    return;
+  }
+  const cats = snap.categories, kids = {};
+  let rootId = null;
+  for (const [id, c] of Object.entries(cats)) {
+    if (c.depth === 0) rootId = id;
+    else (kids[c.parents[0]] ||= []).push(id);
+  }
+  const build = (id) => ({id, ...cats[id], children: (kids[id] || []).map(build)});
+  const root = d3.hierarchy(build(rootId));
+  root.sort((a, b) => b.data.total - a.data.total || a.data.title.localeCompare(b.data.title));
+
+  const label = (d) => d.depth === 0 ? short(d.data.title) : short(d.data.title).replace(/^Project Korikath[-\s]*/i, "") || short(d.data.title);
+  const trunc = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;
+  const radius = (d) => 3.5 + 10 * Math.sqrt(d.data.total / Math.max(root.data.total, 1));
+  // Generous spacing so the names can stay at a comfortable reading size (15px).
+  const dx = 32, dy = 360;
+  const margin = {top: 24, right: 360, bottom: 24, left: 40};
+  const tree = d3.tree().nodeSize([dx, dy]);
+  const diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x);
+
+  const svg = d3.select(host).append("svg").attr("role", "img").attr("aria-label", "Expandable diagram of the category tree");
+  const gLink = svg.append("g").attr("fill", "none").attr("stroke", "var(--border)").attr("stroke-width", 1.5);
+  const gNode = svg.append("g");
+
+  root.x0 = 0;
+  root.y0 = 0;
+  root.descendants().forEach((d, i) => {
+    d.id = i;
+    d._children = d.children;
+    if (d.depth >= 1) d.children = null;  // start with the mother category's direct subcategories showing
+  });
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function update(source) {
+    const duration = reduce ? 0 : 300;
+    const nodes = root.descendants().reverse();
+    const links = root.links();
+    tree(root);
+    let top = root, bottom = root;
+    root.eachBefore(n => { if (n.x < top.x) top = n; if (n.x > bottom.x) bottom = n; });
+    const height = bottom.x - top.x + margin.top + margin.bottom;
+    const width = d3.max(nodes, d => d.y) + margin.left + margin.right;
+    svg.transition().duration(duration)
+      .attr("width", width).attr("height", height)
+      .attr("viewBox", [-margin.left, top.x - margin.top, width, height]);
+
+    const node = gNode.selectAll("g.node").data(nodes, d => d.id);
+    const enter = node.enter().append("g").attr("class", "node")
+      .attr("transform", `translate(${source.y0},${source.x0})`)
+      .attr("fill-opacity", 0).attr("stroke-opacity", 0);
+    const toggle = (event, d) => {
+      if (!d._children) return;
+      d.children = d.children ? null : d._children;
+      update(d);
+    };
+    enter.append("circle").attr("r", radius).attr("stroke", "var(--accent)").attr("stroke-width", 1.5)
+      .style("cursor", d => d._children ? "pointer" : "default").on("click", toggle);
+    // Names always to the right of the circle (with a background-coloured outline so they stay readable
+    // over the lines); names on both sides would collide between neighbouring levels.
+    const side = () => 1;
+    const text = enter.append("text").attr("class", "label").attr("dy", "0.32em")
+      .attr("x", d => side(d) * (radius(d) + 6)).attr("text-anchor", d => side(d) < 0 ? "end" : "start")
+      .style("cursor", d => d._children ? "pointer" : "default").on("click", toggle);
+    text.append("tspan").text(d => trunc(label(d), 30));
+    text.append("tspan").attr("class", "n").attr("fill", "var(--muted)").text(d => ` · ${fmt(d.data.total)}`);
+    text.append("title").text(d => `${d.data.title}\n${fmt(d.data.total)} unique files below · ${fmt(d.data.direct)} filed directly · ${fmt(d.descendants().length - 1)} subcategories below`);
+    enter.append("a").attr("href", d => pageUrl(d.data.title)).attr("target", "_blank").attr("rel", "noopener")
+      .append("text").attr("class", "ext").attr("dy", "0.32em")
+      .attr("x", d => -side(d) * (radius(d) + 5)).attr("text-anchor", d => side(d) < 0 ? "start" : "end")
+      .text("↗").append("title").text("Open on Commons");
+
+    const merged = node.merge(enter);
+    merged.transition().duration(duration)
+      .attr("transform", d => `translate(${d.y},${d.x})`).attr("fill-opacity", 1).attr("stroke-opacity", 1);
+    // Filled circle = has hidden subcategories (click to open), as on osintframework.com.
+    merged.select("circle").attr("fill", d => d._children && !d.children ? "var(--accent)" : "var(--surface)");
+    node.exit().transition().duration(duration).remove()
+      .attr("transform", `translate(${source.y},${source.x})`).attr("fill-opacity", 0).attr("stroke-opacity", 0);
+
+    const link = gLink.selectAll("path").data(links, d => d.target.id);
+    const linkEnter = link.enter().append("path").attr("d", () => {
+      const o = {x: source.x0, y: source.y0};
+      return diagonal({source: o, target: o});
+    });
+    link.merge(linkEnter).transition().duration(duration).attr("d", diagonal);
+    link.exit().transition().duration(duration).remove().attr("d", () => {
+      const o = {x: source.x, y: source.y};
+      return diagonal({source: o, target: o});
+    });
+    root.eachBefore(d => { d.x0 = d.x; d.y0 = d.y; });
+  }
+
+  $("dendroExpand").onclick = () => { root.each(d => { if (d._children) d.children = d._children; }); update(root); };
+  $("dendroCollapse").onclick = () => { root.each(d => { if (d.depth >= 1) d.children = null; }); root.children = root._children; update(root); };
+  update(root);
+}
+
+// ---- Crawl buttons and schedule. These need the local server (server.py, started by the
+// Korikath Tracker shortcut); a page opened straight from disk can't start programs.
+const SERVED = location.protocol.startsWith("http");
+const isRunning = () => {
+  const s = window.TRACKER_STATUS;
+  return !!(s && s.running && Date.now() - Date.parse(s.updated_at) < STALE_MS);
+};
+function updateButtons() {
+  const busy = isRunning();
+  for (const id of ["startQuick", "startFull", "startUsage"]) {
+    const b = $(id);
+    b.disabled = !SERVED || busy;
+    b.title = !SERVED ? "Open the dashboard with the Korikath Tracker shortcut to start crawls" : busy ? "A crawl is already running" : "";
+  }
+}
+async function startCrawl(mode) {
+  $("crawlMsg").textContent = "";
+  try {
+    const r = await fetch(`/api/crawl/${mode}`, {method: "POST", headers: {"X-Korikath": "1"}});
+    if (r.status === 409) $("crawlMsg").textContent = "A crawl is already running. Wait for it to finish.";
+    else if (!r.ok) $("crawlMsg").textContent = "Couldn't start the crawl (server answered " + r.status + ").";
+  } catch (e) {
+    $("crawlMsg").textContent = "Couldn't reach the tracker. Close this tab and open the Korikath Tracker shortcut again.";
+  }
+  pollStatus();
+}
+async function loadSchedule() {
+  const el = $("schedule");
+  if (!SERVED) {
+    el.innerHTML = "Open the dashboard with the <b>Korikath Tracker</b> shortcut to see the schedule and start crawls.";
+    return;
+  }
+  try {
+    const info = await (await fetch("/api/info")).json();
+    const tasks = (info.schedule || []).sort((a, b) => (a.mode === "full" ? -1 : 1));
+    if (!tasks.length) { el.innerHTML = "No scheduled crawls are set up. Run <code>python install.py</code> to add them."; return; }
+    const days = {full: "Every Monday", quick: "Every day except Monday"};
+    const result = (t) => !t.last ? "" : t.result === 0 ? " · last run OK" : t.result === 267009 ? " · running now"
+      : ` · last run ended with code ${t.result}`;
+    const next = tasks.filter(t => t.next && t.state !== "Disabled").sort((a, b) => Date.parse(a.next) - Date.parse(b.next))[0];
+    if (next && DATA && DATA.snapshot) {
+      $("ncCrawls").textContent = `Last crawl ${when(DATA.snapshot.taken_at)} · next: ${next.mode === "full" ? "full crawl" : "quick check"} ${when(next.next)}`;
+    }
+    el.innerHTML = tasks.map(t => `<div class="item"><b>${t.mode === "full" ? "Full crawl" : "Quick check"}</b>: ${days[t.mode]}${t.state === "Disabled" ? " (disabled)" : ""}<br>
+      ${t.usage ? "then an on-wiki usage check<br>" : ""}Next: ${t.next ? when(t.next) : "—"}${t.last ? `<br>Last: ${when(t.last)}${result(t)}` : ""}</div>`).join("");
+  } catch (e) {
+    el.textContent = "Couldn't read the schedule.";
+  }
+}
+// ---- PDF reports, made by the local server (report.py). Any button with data-report: "" is the
+// whole project, a name is that contributor.
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-report]");
+  if (!b) return;
+  const msg = b.parentNode.querySelector(".report-msg");
+  if (!SERVED) {
+    msg.textContent = "Open the dashboard with the Korikath Tracker shortcut to download PDF reports.";
+    return;
+  }
+  const label = b.textContent;
+  b.disabled = true;
+  b.textContent = "Making the PDF…";
+  msg.textContent = "";
+  try {
+    const user = b.dataset.report;
+    const r = await fetch("/api/report.pdf" + (user ? "?user=" + encodeURIComponent(user) : ""));
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "server answered " + r.status);
+    const cd = r.headers.get("Content-Disposition") || "";
+    const m = cd.match(/filename\*=UTF-8''([^;]+)/);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(await r.blob());
+    a.download = m ? decodeURIComponent(m[1]) : "Korikath_report.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  } catch (err) {
+    msg.textContent = err instanceof TypeError
+      ? "Couldn't reach the tracker. Close this tab and open the Korikath Tracker shortcut again."
+      : "Couldn't make the report: " + err.message;
+  } finally {
+    b.disabled = false;
+    b.textContent = label;
+  }
+});
+
+$("startQuick").onclick = () => startCrawl("quick");
+$("startFull").onclick = () => startCrawl("full");
+$("startUsage").onclick = () => startCrawl("usage");
+
+// ---- Live run status (status.js is rewritten by tracker.py every few seconds while it runs)
+const STALE_MS = 3 * 60 * 1000;
+function renderMiniStatus() {
+  const s = window.TRACKER_STATUS, el = $("miniStatus");
+  let html = "";
+  if (s && s.running && Date.now() - Date.parse(s.updated_at) < STALE_MS) {
+    const est = estimate(s);
+    html = `<a class="mini running" href="#/crawls"><span class="pulse"></span><span><b>${runName(s)} running</b>${est ? ` · ${esc(est.text)}` : ""}</span></a>`;
+  } else if (s && s.running) {
+    html = `<a class="mini stalled" href="#/crawls"><span class="pulse"></span><span><b>The last crawl stopped before finishing.</b> Open Crawls to start a new one.</span></a>`;
+  } else if (s && s.phase === "failed") {
+    html = `<a class="mini failed" href="#/crawls"><span class="pulse"></span><span><b>The last crawl failed.</b> Open Crawls for details.</span></a>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderStatus() {
+  const s = window.TRACKER_STATUS, el = $("status");
+  renderMiniStatus();
+  if (!s) { el.innerHTML = ""; return; }
+  const prevNote = DATA && DATA.snapshot
+    ? `Below are the results of the previous run (${when(DATA.snapshot.taken_at)}).`
+    : "Results will appear here when it finishes.";
+  const box = (cls, title, lines) => `<div class="status ${cls}"><span class="pulse"></span><div><b>${title}</b>${lines.map(l => `<div class="small">${l}</div>`).join("")}</div></div>`;
+
+  if (s.running && Date.now() - Date.parse(s.updated_at) < STALE_MS) {
+    const what = s.phase === "starting" ? "Starting…"
+      : s.phase === "connecting" ? "Connecting to Commons… (waiting for the internet connection if it isn't up yet)"
+      : s.phase === "usage" ? `Checking on-wiki usage… ${fmt(s.usage_done || 0)} of ${fmt(s.usage_total || 0)} files`
+      : s.phase === "assessments" ? "Checking quality, featured and valued images…"
+      : s.phase === "details" ? `Looking up locations and cameras… ${fmt(s.details_done || 0)} of ${fmt(s.details_total || 0)} files`
+      : s.phase === "comparing"
+      ? `Comparing with the previous run… (${fmt(s.files)} files in ${fmt(s.categories)} categories)`
+      : `Gathering data from Commons… ${fmt(s.files)} files in ${fmt(s.categories)} categories so far`;
+    const est = estimate(s);
+    el.innerHTML = box("running", what, [
+      est ? `<div class="progress" role="progressbar" aria-valuenow="${Math.round(est.pct * 100)}" aria-valuemin="0" aria-valuemax="100">
+        <span style="width:${(est.pct * 100).toFixed(1)}%"></span></div><b class="eta">${est.text}</b>` : "",
+      s.phase === "crawling" && s.current ? `Reading ${link(s.current, short(s.current))}` : "",
+      `${runName(s)} started ${when(s.started_at)}. This page refreshes by itself when it's done.`,
+      `It runs in the background, so you can close this page and come back later.`,
+      prevNote,
+    ].filter(Boolean));
+  } else if (s.running) {
+    el.innerHTML = box("stalled", "The last run stopped before finishing", [
+      `It started ${when(s.started_at)} and last reported progress ${when(s.updated_at)}. Its window may have been closed, or the computer went to sleep.`,
+      `Start a new crawl with the buttons above. ${prevNote}`,
+    ]);
+  } else if (s.phase === "failed") {
+    el.innerHTML = box("failed", "The last run failed", [
+      `Started ${when(s.started_at)}: ${esc(s.error || "unknown error")}`,
+      `Check your internet connection and start a new crawl with the buttons above. ${prevNote}`,
+    ]);
+  } else {
+    el.innerHTML = "";
+    // A run finished after this page was built: reload once to show its results.
+    const build = s.dashboard_built || s.last_snapshot;
+    const changed = s.dashboard_built ? s.dashboard_built !== (DATA && DATA.generated_at)
+      : s.last_snapshot !== (DATA && DATA.snapshot_file);
+    if (s.phase === "done" && build && changed) {
+      let seen = null;
+      try { seen = sessionStorage.getItem("reloadedFor"); sessionStorage.setItem("reloadedFor", build); } catch (e) {}
+      if (seen !== build) location.reload();
+    }
+  }
+}
+// Time left: requests still expected (from earlier runs of the same kind) times this run's own
+// seconds per request so far, counted down between status updates.
+const TIME_FMT = new Intl.DateTimeFormat("en-GB", {timeZone: "UTC", hour: "2-digit", minute: "2-digit", hour12: false});
+const runName = (s) => ({quick: "Quick check", full: "Full crawl", usage: "Usage check"})[s.mode] || "Run";
+function timeLeft(pct, left) {
+  if (left < 20) return {pct, text: "Almost done…"};
+  const finish = TIME_FMT.format(new Date(Date.now() + left * 1000)).replace(/\b(am|pm)\b/i, (m) => m.toUpperCase());
+  return {pct, text: `${left < 60 ? "Less than a minute" : `About ${Math.round(left / 60)} min`} left · ${Math.round(pct * 100)}% · finishes around ${finish} UTC`};
+}
+function estimate(s) {
+  if (s.phase === "connecting") return null;
+  if (s.phase === "usage") {
+    const done = s.usage_done || 0, total = s.usage_total || 1, pct = Math.min(done / total, 0.99);
+    if (done < 500) return {pct, text: "Checking on-wiki usage: estimating time left…"};
+    const perFile = (Date.parse(s.updated_at) - Date.parse(s.usage_started_at)) / 1000 / done;
+    const r = timeLeft(pct, (total - done) * perFile - (Date.now() - Date.parse(s.updated_at)) / 1000);
+    r.text = "On-wiki usage: " + r.text;
+    return r;
+  }
+  if (s.phase === "comparing") return {pct: 0.99, text: "Almost done: comparing with the previous run…"};
+  if (s.phase === "dates") return {pct: 0.97, text: `Almost done: looking up upload dates of new files (${fmt(s.dates_done)} of ${fmt(s.dates_total)})…`};
+  const done = s.requests_done || 0, expected = s.requests_expected;
+  if (!expected || !s.crawl_started_at) return null;
+  const pct = Math.min(done / expected, 0.99);
+  if (done < 15) return {pct, text: "Estimating time left…"};
+  const perRequest = (Date.parse(s.updated_at) - Date.parse(s.crawl_started_at)) / 1000 / done;
+  const left = (expected - done) * perRequest - (Date.now() - Date.parse(s.updated_at)) / 1000;
+  return timeLeft(pct, left);
+}
+
+// Live progress of the views job on the Views page, and a prompt when newer counts have been built
+// (rather than reloading the page while someone is reading it).
+function renderViewsLive() {
+  const S = window.VIEWS_STATUS, el = $("viewsLive");
+  if (!el) return;
+  let html = "";
+  const fresh = S && Date.now() - Date.parse(S.updated_at) < 5 * 60 * 1000;
+  const newer = S && S.built && DATA && S.built !== DATA.generated_at && Date.parse(S.built) > Date.parse(DATA.generated_at);
+  const refresh = newer ? `<div class="small" style="margin-top:6px"><b>Newer view counts are ready.</b>
+    <button type="button" class="btn" onclick="location.reload()">Refresh</button></div>` : "";
+  if (S && S.running && fresh && S.total) {
+    const pct = Math.min(S.done / S.total, 1);
+    const secs = (Date.parse(S.updated_at) - Date.parse(S.started_at)) / 1000;
+    const left = S.done > 20 ? secs / S.done * (S.total - S.done) : null;
+    const leftText = left == null ? "estimating time left…" : left < 3600 ? `about ${Math.max(1, Math.round(left / 60))} min left`
+      : `about ${(left / 3600).toFixed(left < 36000 ? 1 : 0)} hours left while the PC is on`;
+    const what = S.history ? "Collecting view history" : "Updating today's view counts";
+    html = `<div class="status running"><span class="pulse"></span><div><b>${what}: ${fmt(S.done)} of ${fmt(S.total)} files</b>
+      <div class="progress" role="progressbar" aria-valuenow="${Math.round(pct * 100)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${(pct * 100).toFixed(1)}%"></span></div>
+      <div class="small"><b class="eta">${Math.round(pct * 100)}% · ${leftText}</b></div>
+      <div class="small">The figures below are rebuilt every 500 files.</div>${refresh}</div></div>`;
+  } else if (newer) {
+    html = `<div class="notice">${refresh}</div>`;
+  }
+  el.innerHTML = html;
+}
+
+function pollStatus() {
+  const sc = document.createElement("script");
+  sc.src = "status.js?t=" + Date.now();
+  sc.onload = sc.onerror = () => { sc.remove(); renderStatus(); updateButtons(); };
+  const vs = document.createElement("script");
+  vs.src = "views_status.js?t=" + Date.now();
+  vs.onload = vs.onerror = () => { vs.remove(); renderViewsLive(); };
+  document.head.appendChild(vs);
+  document.head.appendChild(sc);
+}
+
+// ---- Files by contributor in a category (#/user-files?c=Category&u=Name[&sub=0]). The server works it out
+// from the latest crawl and the cached uploaders (user_files.py), so it needs the dashboard opened with the shortcut.
+let ufLast = null;
+function setupUserFiles() {
+  const cats = DATA && DATA.snapshot ? Object.values(DATA.snapshot.categories).sort((a, b) => b.total - a.total) : [];
+  $("ufCats").innerHTML = cats.map(c => `<option value="${esc(short(c.title))}">${fmt(c.total)} files</option>`).join("");
+  $("ufNames").innerHTML = ((DATA && DATA.contributors && DATA.contributors.users) || []).map(u => `<option value="${esc(u[0])}">`).join("");
+  $("ufMeta").innerHTML = `Choose a category of the Korikath tree and type a contributor's user name to list the files they uploaded there
+    (each file's original uploader), with the total. Leave the name empty to see everyone who uploaded to the category.
+    ${DATA && DATA.snapshot ? `From the latest crawl, ${esc(when(DATA.snapshot.taken_at))}.` : ""}`;
+  $("ufForm").onsubmit = (e) => {
+    e.preventDefault();
+    const q = new URLSearchParams();
+    q.set("c", $("ufCat").value.trim());
+    if ($("ufUser").value.trim()) q.set("u", $("ufUser").value.trim());
+    if (!$("ufSub").checked) q.set("sub", "0");
+    const hash = "#/user-files?" + q.toString();
+    if (location.hash === hash) showUserFiles(q, true); else location.hash = hash;
+  };
+  $("ufResult").onclick = (e) => {
+    const b = e.target.closest("[data-uf-user]");
+    if (!b) return;
+    $("ufUser").value = b.dataset.ufUser;
+    $("ufForm").requestSubmit();
+  };
+}
+
+function downloadCsv(name, rows) {
+  const cell = (v) => /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  const a = document.createElement("a");
+  // The byte-order mark makes Excel read the file as UTF-8, so Bengali names show correctly.
+  a.href = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(v => cell(String(v))).join(",")).join("\r\n")],
+    {type: "text/csv;charset=utf-8"}));
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+
+async function showUserFiles(q, force) {
+  const cat = q.get("c") || "", user = q.get("u") || "", sub = q.get("sub") !== "0";
+  $("ufCat").value = cat;
+  $("ufUser").value = user;
+  $("ufSub").checked = sub;
+  const out = $("ufResult");
+  if (!cat) { out.innerHTML = ""; ufLast = null; return; }
+  const key = [cat, user, sub].join("|");
+  if (key === ufLast && !force) return;
+  ufLast = key;
+  if (!SERVED) {
+    out.innerHTML = `<div class="notice">Open the dashboard with the Korikath Tracker shortcut to look up files.</div>`;
+    return;
+  }
+  out.innerHTML = `<div class="notice">Looking up…</div>`;
+  let r;
+  try {
+    const res = await fetch(`/api/user-files?category=${encodeURIComponent(cat)}${user ? "&user=" + encodeURIComponent(user) : ""}${sub ? "" : "&direct=1"}`);
+    r = await res.json();
+    if (!res.ok) throw new Error(r.error || "server answered " + res.status);
+  } catch (err) {
+    if (key !== ufLast) return;
+    ufLast = null;
+    out.innerHTML = `<div class="notice">${err instanceof TypeError
+      ? "Couldn't reach the tracker. Close this tab and open the Korikath Tracker shortcut again."
+      : esc(err.message)}</div>`;
+    return;
+  }
+  if (key !== ufLast) return;  // a newer lookup was started meanwhile
+  const pct = (a, b) => b ? (100 * a / b).toFixed(a / b < 0.01 ? 2 : 1) + "%" : "—";
+  const where = r.subcategories ? `in it and its ${fmt(r.subcategory_count)} ${r.subcategory_count === 1 ? "subcategory" : "subcategories"}` : "directly in it";
+  const uploaders = `<section><h2>Everyone who uploaded to this category <span class="count">${fmt(r.uploaders.length)}</span></h2>
+    <p class="sub" style="margin:-4px 0 8px">Click a name to list that person's files here.</p>
+    <div class="scroll"><table id="ufUploaders"></table></div></section>`;
+  if (!r.user) {
+    out.innerHTML = `<div class="kpis">${kpi("Files in " + link(r.category, short(r.category)), fmt(r.category_files), null, false, where)}
+      ${kpi("Uploaders", fmt(r.uploaders.length))}</div>${uploaders}`;
+  } else {
+    const n = r.files.length;
+    out.innerHTML = `<div class="kpis">
+        ${kpi(`Files by ${esc(r.user)}`, fmt(n), null, false, `in ${link(r.category, short(r.category))}, ${where}`)}
+        ${kpi("Share of the category", pct(n, r.category_files), null, false, `of its ${fmt(r.category_files)} files`)}
+      </div>
+      ${r.known_user ? "" : `<div class="notice">No files by <b>${esc(r.user)}</b> anywhere in Korikath. Check the spelling of the user name.</div>`}
+      ${n ? `<section><div class="row" style="justify-content:space-between">
+          <h2 style="margin:0">Files by ${esc(r.user)} in ${esc(short(r.category))} <span class="count">${fmt(n)}</span></h2>
+          <button type="button" class="btn" id="ufCsv">Download list (CSV)</button></div>
+        <div class="scroll"><table id="ufFiles"></table></div></section>
+        <section><h2>Previews</h2>${gridWithMore(r.files, ([t, up]) => `<div class="card"><a href="${pageUrl(t)}" target="_blank" rel="noopener">${thumb(t)}</a>
+          <div class="body"><div class="name">${link(t, short(t))}</div><div class="sub">Uploaded ${esc(dayOnly(up))}</div></div></div>`, 24)}</section>`
+        : r.known_user ? `<div class="notice">${esc(r.user)} has no files ${r.subcategories ? "in this category or below it" : "directly in this category"}.</div>` : ""}
+      ${uploaders}`;
+    if (n) {
+      sortState.ufFiles = {col: 0, dir: 1};
+      delete expanded.ufFiles;
+      sortTable("ufFiles", [
+        {label: "#", cls: "num", key: f => f[0], cell: f => fmt(f[0])},
+        {label: "File", text: true, key: f => short(f[1]).toLowerCase(), cell: f => link(f[1], short(f[1]))},
+        {label: "Uploaded", key: f => f[2] ? Date.parse(f[2]) : 0, cell: f => esc(f[2] ? whenShort(f[2]) : "—")},
+      ], r.files.map((f, i) => [i + 1, ...f]), 50, 0);
+      $("ufCsv").onclick = () => downloadCsv(
+        `korikath_${(r.user + " in " + short(r.category)).replace(/[\\/:*?"<>|\s]+/g, "_")}.csv`,
+        [["number", "file", "file_url", "uploaded_utc", "uploader", "category"],
+         ...r.files.map(([t, up], i) => [i + 1, t, pageUrl(t), up || "", r.user, r.category])]);
+    }
+  }
+  delete sortState.ufUploaders;
+  delete expanded.ufUploaders;
+  sortTable("ufUploaders", [
+    {label: "Contributor", text: true, key: u => u[0].toLowerCase(),
+     cell: u => `<button type="button" class="linkbtn" data-uf-user="${esc(u[0])}">${esc(u[0])}</button>`},
+    {label: "Files", cls: "num", key: u => u[1], cell: u => fmt(u[1])},
+    {label: "Share of the category", cls: "num", key: u => u[1], cell: u => pct(u[1], r.category_files)},
+  ], r.uploaders, 15);
+}
+setupUserFiles();
+
+// ---- Pages: #/ overview, #/crawls, #/changes. They're views of this one page, so Back works.
+const PAGE_TITLES = {home: "Korikath Tracker", crawls: "Crawls · Korikath Tracker", changes: "Changes · Korikath Tracker",
+  usage: "On-wiki usage · Korikath Tracker", contributors: "Contributors · Korikath Tracker",
+  places: "Map, devices & metadata · Korikath Tracker", views: "Views · Korikath Tracker",
+  userfiles: "Files by contributor · Korikath Tracker"};
+function route() {
+  const [path, query] = location.hash.replace(/^#\/?/, "").split("?");
+  const name = {"crawls": "crawls", "changes": "changes", "usage": "usage", "contributors": "contributors", "places": "places", "views": "views",
+    "user-files": "userfiles"}[path] || "home";
+  if (name === "places") setTimeout(startMap, 0);
+  const person = name === "contributors" && query ? new URLSearchParams(query).get("u") : null;
+  for (const p of Object.keys(PAGE_TITLES)) $("page-" + p).hidden = p !== name;
+  $("navBack").hidden = name === "home";
+  $("projectReport").hidden = name !== "home";
+  document.title = PAGE_TITLES[name];
+  if (name === "userfiles") {
+    showUserFiles(new URLSearchParams(query || ""));
+    window.scrollTo(0, 0);
+  } else if (person) {
+    showPerson(person);
+    document.title = person + " · " + PAGE_TITLES[name];
+    setTimeout(() => $("personSection").scrollIntoView({block: "start"}), 0);
+  } else {
+    window.scrollTo(0, 0);
+  }
+}
+window.addEventListener("hashchange", route);
+route();
+
+render();
+renderStatus();
+renderViewsLive();
+updateButtons();
+loadSchedule();
+setInterval(pollStatus, 3000);
+setInterval(loadSchedule, 60000);
+</script>
+</body>
+</html>

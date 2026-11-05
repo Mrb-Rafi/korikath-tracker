@@ -1,0 +1,30 @@
+# Only the code, its documentation and the method register are version-controlled.
+# Data is kept, fingerprinted and archived by the tracker itself (archive.py, provenance.py).
+
+# Data files and their metadata
+*.json.gz
+*.meta
+history.json
+usage_history.json
+assessment_history.json
+languages.json
+mediatypes.json
+*.csv
+snapshots/
+reports/
+runs/
+archive/
+logs/
+
+# Generated or transient
+dashboard.html
+map_points.js
+status.js
+views_status.js
+*.lock
+*.tmp
+__pycache__/
+pdftest/
+
+# Local settings (contact details in the User-Agent)
+config.json
