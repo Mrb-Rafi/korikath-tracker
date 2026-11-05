@@ -46,7 +46,8 @@ FORMAT = 1
 # files, locks, temporary files) are left out; dashboard.html is added for report states, since a PDF report
 # is built from the data embedded in it.
 DATA_PATTERNS = ["*.json", "*.json.gz", "*.csv", "snapshots/*.json.gz", "*.meta", "snapshots/*.meta", "reports/*.json", "reports/*.meta",
-                 "logs/*.log", "runs/*.json"]
+                 "logs/*.log", "runs/*.json", "published/*.jsonl", "published/*.csv", "published/*.md",
+                 "published/manifests/*.json", "validation/petscan/*.json"]
 CODE_PATTERNS = ["*.py", "dashboard_template.html", "run.bat", "*.md", "methodology_versions.json"]
 EXCLUDE_SUFFIXES = (".tmp", ".lock")
 
@@ -242,10 +243,11 @@ def cmd_snapshot(args):
     safe_record("manual", extra={"note": args.note} if args.note else None)
 
 
-def cmd_restore(args):
-    path = resolve_state(args.state)
+def restore(ref, folder):
+    """Write every file of a state into an empty `folder`, checking every hash. Returns the state's path."""
+    path = resolve_state(ref)
     state = json.loads(path.read_text(encoding="utf-8"))
-    out = Path(args.folder).resolve()
+    out = Path(folder).resolve()
     if out == BASE:
         raise SystemExit("Restore into a separate, empty folder, not into the tracker's own folder.")
     if out.exists() and any(out.iterdir()):
@@ -254,40 +256,58 @@ def cmd_restore(args):
         target = out / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(load_object(f["sha256"]))
-    print(f"Restored state {path.name} ({len(state['files'])} files, every hash checked) into {out}")
+    return path
 
 
-def cmd_verify(_args):
-    problems, prev = [], None
+def cmd_restore(args):
+    path = restore(args.state, args.folder)
+    state = json.loads(path.read_text(encoding="utf-8"))
+    print(f"Restored state {path.name} ({len(state['files'])} files, every hash checked) into {Path(args.folder).resolve()}")
+
+
+def problems():
+    """[problems] with the archive: the register chain, every state file and every stored object (each distinct
+    object is read and checked once, however many states refer to it)."""
+    out, prev, checked = [], None, {}
     lines = register_lines()
     for i, line in enumerate(lines, 1):
         e = json.loads(line)
         if e["seq"] != i:
-            problems.append(f"line {i}: sequence number {e['seq']}, expected {i}")
+            out.append(f"line {i}: sequence number {e['seq']}, expected {i}")
         if e["prev_sha256"] != (sha256_bytes(prev.encode("utf-8")) if prev else None):
-            problems.append(f"line {i}: does not chain to the line before it (edited or removed entry)")
+            out.append(f"line {i}: does not chain to the line before it (edited or removed entry)")
         prev = line
         sp = STATES / e["state"]
         if not sp.exists():
-            problems.append(f"line {i}: state file {e['state']} is missing")
+            out.append(f"line {i}: state file {e['state']} is missing")
             continue
         body = sp.read_bytes()
         if sha256_bytes(body) != e["state_sha256"]:
-            problems.append(f"line {i}: state file {e['state']} was changed after it was recorded")
+            out.append(f"line {i}: state file {e['state']} was changed after it was recorded")
         for rel, f in json.loads(body)["files"].items():
-            try:
-                load_object(f["sha256"])
-            except (FileNotFoundError, ValueError) as err:
-                problems.append(f"line {i}: {rel}: {err}")
+            d = f["sha256"]
+            if d not in checked:
+                try:
+                    load_object(d)
+                    checked[d] = None
+                except (FileNotFoundError, ValueError) as err:
+                    checked[d] = str(err)
+            if checked[d]:
+                out.append(f"line {i}: {rel}: {checked[d]}")
     recorded = {s.name for s in STATES.glob("*.json")}
     for extra in sorted(recorded - {json.loads(x)["state"] for x in lines}):
-        problems.append(f"state file {extra} is not in the register")
-    if problems:
+        out.append(f"state file {extra} is not in the register")
+    return out
+
+
+def cmd_verify(_args):
+    found = problems()
+    if found:
         print("ARCHIVE CHECK FAILED:")
-        for p in problems:
+        for p in found:
             print("  " + p)
         raise SystemExit(1)
-    print(f"Archive OK: {len(lines)} states, register chain intact, every object present and undamaged.")
+    print(f"Archive OK: {len(register_lines())} states, register chain intact, every object present and undamaged.")
 
 
 def cmd_find(args):

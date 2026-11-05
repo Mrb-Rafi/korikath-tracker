@@ -13,6 +13,7 @@ folder and the PDF `../Project_Korikath_Comprehensive_Statistics_Report.pdf`.
 | 2026-11-04 | First version. |
 | 2026-11-04 | **Decision: UTC everywhere.** All times the tool stores *or shows* (dashboard, CSV files, PDF reports, file names, logs) are in UTC, written with an explicit "UTC" or ISO 8601 `Z`. No local time zone is shown. This replaces the earlier proposal of "Bangladesh time (UTC+06:00)". See WP8.5. Not implemented yet. |
 | 2026-11-04 | **WP5 (archiving) implemented** in `archive.py`. The first state was recorded at 2026-11-04 07:47:57 UTC. See WP5 for what is done and what remains. |
+| 2026-11-05 | **Phase 3 implemented (tool 2.2.0).** WP6, WP7, WP10, WP11 and Part 7 are done, and part of WP13 (issuer, statuses, corrections, register). See the status notes under each. Not done: PDF metadata beyond title, digital signatures, the public copy of the register (WP13.4/5, Phase 4), and the dashboard's own wording (WP11 covered the PDF only). |
 | 2026-11-05 | **Phase 2 implemented (tool 2.1.0, method M2).** See the status notes under WP8, WP9, WP14 and WP15. **Decision on storage:** issued PDFs are not stored; the archive and (Phase 4) the public register keep only each PDF's SHA-256, plus a fingerprint of its figures and the archived data and code it was built from, which are enough to verify a PDF and to regenerate it. WP6's bundle will reference archived data by hash instead of copying it, and keep figures.json (small) rather than the PDF. |
 | 2026-11-05 | **Phase 1 implemented (tool 2.0.0, method M1).** WP8.5 UTC everywhere; WP1 versioning (`version.py`, `CHANGELOG.md`, git repository); WP4 methodology register (`methodology.py`, with D01–D18 and L01–L17); WP2 data-file metadata; WP3 run records (`provenance.py`, `runs/`); first tests (`tests/`). Two deliberate changes from the plan's wording, both below: metadata are sidecar files (`<file>.meta`), not an envelope inside each data file, and run records rely on the archive's hash-chained register instead of a second register. |
 
@@ -376,6 +377,19 @@ without bumping `METHOD_VERSION` makes a test fail. The test stores a hash of th
 
 ### WP6: Report bundles and reproducible reports (F3, F4, F10, F13, F15)
 
+> **Status 2026-11-05: implemented, without storing PDFs** (`issuance.py`, `report.py`).
+> - **Inputs.** The "bundle" is an archive state recorded just before each report (all data and code, deduplicated),
+>   plus a manifest (`published/manifests/<ID>.json`, a few KB).
+> - **Fingerprints.** `figures.json` is replaced by a SHA-256 of all figures, since the figures can be regenerated
+>   from the archived inputs.
+> - **Report ID.** `KRK-<P|C>-<date>-<time>Z-<8 hex of the manifest fingerprint>`.
+> - **Commands.** `--rebuild` restores the state into a temporary folder, runs the code recorded in it and compares
+>   figures and HTML. Tested: both identical. `--verify` was tested on an issued PDF (ISSUED), a PDF changed by one
+>   byte (NOT ISSUED) and a superseded report (SUPERSEDED).
+> - **Consistency.** Data changing while a report is made is detected: the report is retried, then marked
+>   PROVISIONAL.
+> - **Not done:** PDF Author/Subject metadata. Chrome sets only the title; it includes the report ID.
+
 **Problem:** reports are built from whatever `dashboard.html` currently contains. Nothing is kept. Thumbnails are
 fetched at print time.
 
@@ -424,6 +438,15 @@ affect `--rebuild`.
 ---
 
 ### WP7: Validation gates (F7, F8, F10)
+
+> **Status 2026-11-05: implemented** (`validate.py`).
+> - **Error checks:** E01–E06.
+> - **Freshness checks:** F01–F05, including "issuer named" and "code committed".
+> - **Cross-checks:**
+>   - W01 PetScan: monthly. The first run on 2026-11-05 matched exactly, 96,428 files with the same page IDs.
+>   - W02 live spot check: 30 seeded random files.
+>   - W03 full assessment re-read.
+> - The quick-check agreement history and the per-category counter comparison are not done.
 
 Add `validate.py` with checks that run at the end of every job and again when a report is frozen. Results go into
 the run record and the report manifest. Each check is **error** (blocks a FINAL report), **warning** (shown in the
@@ -558,6 +581,16 @@ wherever k < N. Today these are missing:
 
 ### WP10: Legal and ethical compliance (F12)
 
+> **Status 2026-11-05: implemented, except the user-agent contact (8).**
+> - Credits come from extmetadata. In "safe" mode (the default), images marked with personality rights are not
+>   reproduced. Identifiable people in images *without* that mark can still appear; review the thumbnails of FINAL
+>   reports for donor use.
+> - The report licence (default CC BY 4.0), the data-source statement, the not-affiliated statement, the privacy note
+>   and the opt-out (`contributor_opt_out`) are in place.
+> - No locations are shown in uploader reports.
+> - The data-source statement deliberately doesn't name a licence for Wikimedia's analytics data; confirm it before
+>   naming one.
+
 > Not legal advice. Before the first public distribution, have someone familiar with Creative Commons licensing
 > and with the donor's data-protection requirements review the final PDF.
 
@@ -606,6 +639,9 @@ affiliation and privacy colophon. An opted-out test user never appears by name.
 
 ### WP11: Neutral language and terminology (F11)
 
+> **Status 2026-11-05: implemented for the PDF.** The terminology and the banned-words test (`tests/test_reports.py`)
+> are in place, and every sentence comes from code templates. The dashboard still says "views" and "contributors".
+
 1. Write `docs/STYLE.md` with the rules below. Add a test that searches `report.py` and the template for the
    banned words.
 2. **Renames:**
@@ -653,6 +689,9 @@ dependency).
 ---
 
 ### WP13: Issuance, corrections and governance (F13, F15)
+
+> **Status 2026-11-05: points 1–3 implemented** (issuer in config, FINAL / PROVISIONAL / SUPERSEDED, `ERRATA.md`
+> generated from the register). Points 4–6 (public register, signing, method-change box) are Phase 4.
 
 1. **Issuer.** `config.json` gets `issuer: {"name": "...", "role": "...", "contact": "..."}`, printed on the cover.
 2. **Status:** FINAL, PROVISIONAL or SUPERSEDED. Superseding is recorded in the register with the new report ID

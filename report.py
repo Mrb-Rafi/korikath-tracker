@@ -1,19 +1,26 @@
-"""PDF statistics reports: the whole project, or one contributor.
+"""PDF statistics reports: the whole project, or one uploader. Every report is issued with an ID, a status
+(FINAL or PROVISIONAL, decided by the checks in validate.py) and a fingerprint, and is recorded in the register of
+issued reports (issuance.py). The PDF itself is not kept; the data and code it was made from are (archive.py).
 
-The report is built as an HTML page (with charts drawn as SVG) and printed to PDF by Microsoft Edge
-or Google Chrome in headless mode, so Bengali and other scripts are shaped correctly. The project
-figures are the ones the dashboard shows (read from dashboard.html); a contributor's report adds
-details worked out from the saved data files. No requests go to Wikimedia, apart from the browser
-loading a few thumbnails from Commons.
+The report is built as an HTML page (with charts drawn as SVG) and printed to PDF by Microsoft Edge or Google
+Chrome in headless mode, so Bengali and other scripts are shaped correctly. Its figures are computed from the
+saved data files (tracker.build_payload). Requests to Wikimedia: a live spot check of 30 files, the authors and
+licences of the images shown, and the browser loading those thumbnails.
 
-    python report.py                      project report, saved in your Downloads folder
-    python report.py --user "Name"        one contributor's report
+    python report.py                       project report, saved in your Downloads folder
+    python report.py --user "Name"         one uploader's report
+    python report.py --verify FILE.pdf     was this PDF issued by the tracker, and what is its status?
+    python report.py --rebuild REPORT_ID   regenerate an issued report from its archive state and compare
+    python report.py --register            list issued reports
+    python report.py --supersede OLD_ID --by NEW_ID --reason "..."   record a correction
 """
 
 import argparse
+import hashlib
 import html
 import json
 import math
+import re
 import os
 import shutil
 import subprocess
@@ -101,6 +108,16 @@ def views_period(V):
 
 def month_name(m):
     return datetime.strptime(m, "%Y-%m").strftime("%b %Y")
+
+
+def opted_out():
+    """Uploaders who asked not to be named (config.json: contributor_opt_out). They are counted in every total
+    but not named in any list, and have no report of their own."""
+    return set((tracker.load_json(BASE / "config.json", {}) or {}).get("contributor_opt_out") or [])
+
+
+def shown(name):
+    return "(name withheld at the uploader's request)" if name in opted_out() else name
 
 
 def short(title):
@@ -270,15 +287,33 @@ def table(head, rows, num=(), note=None):
 
 
 def section(title, body, intro=None):
-    return f'<section><h2>{esc(title)}</h2>{f"<p class=intro>{intro}</p>" if intro else ""}{body}</section>'
+    src = data_line(*SOURCES[title]) if title in SOURCES else ""
+    return f'<section><h2>{esc(title)}</h2>{f"<p class=intro>{intro}</p>" if intro else ""}{body}{src}</section>'
+
+
+RENDER = {"manifest": None, "credits": None, "wanted": None, "data": None}  # the report being rendered (render_html)
 
 
 def thumbs(titles):
-    cells = "".join(
-        f'<figure><img src="https://commons.wikimedia.org/wiki/Special:FilePath/{urllib.parse.quote(short(t).replace(" ", "_"))}?width=320" '
-        f'alt="" onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{{className:\'noimg\',textContent:\'No preview\'}}))">'
-        f'<figcaption>{esc(short(t))}</figcaption></figure>' for t in titles)
-    return f'<div class="thumbs">{cells}</div>'
+    """Thumbnails, each with its author and licence; a file without them, or marked as showing identifiable people,
+    is shown as a title only (fetch_credits)."""
+    titles = list(titles)
+    if RENDER["wanted"] is not None:
+        RENDER["wanted"].update(titles)
+    credits = RENDER["credits"] or {}
+    cells = []
+    for t in titles:
+        c = credits.get(t) or {}
+        if c.get("show"):
+            lic = (f'<a href="{esc(c["licence_url"])}">{esc(c["licence"])}</a>' if c.get("licence_url") else esc(c["licence"]))
+            img = (f'<img src="https://commons.wikimedia.org/wiki/Special:FilePath/{urllib.parse.quote(short(t).replace(" ", "_"))}?width=320" '
+                   f'alt="" onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{{className:\'noimg\',textContent:\'No preview\'}}))">')
+            cap = f'{esc(short(t))}<span class="credit">{esc(c["author"])} · {lic}</span>'
+        else:
+            img = f'<div class="noimg">Image not shown<br>({esc(c.get("reason") or "credit not checked")})</div>'
+            cap = esc(short(t))
+        cells.append(f"<figure>{img}<figcaption>{cap}</figcaption></figure>")
+    return f'<div class="thumbs">{"".join(cells)}</div>'
 
 
 CSS = """
@@ -311,7 +346,8 @@ table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin: 4px 0;
 thead { display: table-header-group; }
 tr { break-inside: avoid; }
 th { text-align: left; color: #6b675f; font-weight: 600; border-bottom: 1.5px solid #cfcbc0; padding: 3px 5px; }
-td { border-bottom: 1px solid #eeebe4; padding: 2.5px 5px; vertical-align: top; overflow-wrap: anywhere; }
+td { border-bottom: 1px solid #eeebe4; padding: 2.5px 5px; vertical-align: top; overflow-wrap: break-word; }
+.nw { white-space: nowrap; }
 .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .cols > div { min-width: 0; }
@@ -327,14 +363,39 @@ svg.chart { display: block; margin: 4px 0; font: 7.5pt 'Segoe UI', sans-serif; f
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .removed { color: #a33a2b; }
 .pill { display: inline-block; font-size: 7.5pt; padding: 0 5px; border-radius: 8px; background: #e3efe8; color: #2f6b4f; }
+.badge { display: inline-block; font-weight: 700; padding: 0 7px; border-radius: 4px; letter-spacing: .04em; }
+.badge.final { background: #2f6b4f; color: #fff; }
+.badge.provisional { background: #a33a2b; color: #fff; }
+.reasons { border: 1.5px solid #a33a2b; background: #f7e4e0; border-radius: 6px; padding: 6px 10px; margin-top: 8px; font-size: 8.5pt; }
+.reasons ul { margin: 3px 0 0 16px; padding: 0; }
+.mono { font-family: Consolas, 'Courier New', monospace; font-size: 8pt; overflow-wrap: anywhere; }
+.src { color: #6b675f; font-size: 7.5pt; border-top: 1px dotted #cfcbc0; margin-top: 6px; padding-top: 3px; }
+.credit { display: block; font-size: 6.5pt; color: #8a867d; }
+.trust p { margin: 0 0 4px; }
+.trust h3 { margin: 8px 0 2px; }
+.res.passed { color: #2f6b4f; font-weight: 600; }
+.res.failed { color: #a33a2b; font-weight: 700; }
+.res.notrun { color: #8a5a00; }
+.watermark { position: fixed; top: 42%; left: 0; right: 0; text-align: center; transform: rotate(-30deg);
+  font-size: 54pt; font-weight: 800; color: rgba(163, 58, 43, .10); letter-spacing: .08em; z-index: -1; }
 """
 
 
-def page(title, kicker, meta_rows, body):
-    meta = "".join(f"<b>{esc(k)}</b><span>{v}</span>" for k, v in meta_rows)
-    return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{esc(title)}</title>'
-            f"<style>{CSS}</style></head><body><header><div class=kicker>{esc(kicker)}</div><h1>{esc(title)}</h1>"
-            f'<div class="meta">{meta}</div></header>{body}</body></html>')
+def page(title, kicker, meta_rows, body, manifest=None):
+    if manifest is None:  # a page without an issued report (only used by tests)
+        meta = "".join(f"<b>{esc(k)}</b><span>{v}</span>" for k, v in meta_rows)
+        return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{esc(title)}</title>'
+                f"<style>{CSS}</style></head><body><header><div class=kicker>{esc(kicker)}</div><h1>{esc(title)}</h1>"
+                f'<div class="meta">{meta}</div></header>{body}</body></html>')
+    m = manifest
+    css = CSS.replace('content: "Project Korikath statistics"', f'content: "{m["report_id"]} · {m["status"]}"')
+    mark = '<div class="watermark">PROVISIONAL</div>' if m["status"] != "FINAL" else ""
+    return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{esc(title)} · {esc(m["report_id"])}</title>'
+            f'<meta name="author" content="{esc((m.get("issuer") or {}).get("name") or "Project Korikath")}">'
+            f'<meta name="description" content="{esc(m["report_id"])} {esc(m["status"])} {esc(m["fingerprint"])}">'
+            f"<style>{css}</style></head><body>{mark}<header><div class=kicker>{esc(kicker)}</div><h1>{esc(title)}</h1>"
+            f"{cover(m, meta_rows)}</header>{trust_section(m)}{checks_section(m)}"
+            f"{body}{appendices(m, RENDER['data'])}</body></html>")
 
 
 # ------------------------------------------------------------------------ data
@@ -387,7 +448,7 @@ def per_year(series):
 # --------------------------------------------------------------- project report
 
 
-def project_report(D, generated):
+def project_report(D, generated, manifest=None):
     snap, hist = D["snapshot"], D.get("history") or []
     latest = hist[-1] if hist else {}
     langs = D.get("languages") or {}
@@ -402,7 +463,7 @@ def project_report(D, generated):
     if A:
         meta.append(("Assessments checked", esc(fmt_time(A["checked_at"]))))
     if V:
-        meta.append(("Views counted", f"{esc(views_period(V))} (complete months) · {fmt(V['with_history'])} of {fmt(V['files'])} files"
+        meta.append(("File requests counted", f"{esc(views_period(V))} (complete months) · {fmt(V['with_history'])} of {fmt(V['files'])} files"
                      + (" (still being collected)" if V["with_history"] < V["files"] else "")))
     body = []
 
@@ -434,15 +495,15 @@ def project_report(D, generated):
             cards.append(("Times on a main page", fmt(sum(r["times"] for r in rows)),
                           f"{fmt(len(rows))} files on the main pages of {fmt(len(wikis))} wikis"))
     if V:
-        cards.append(("All-time views" if V["with_history"] >= V["files"] else "Views so far", big(V["all"]),
-                      f"{big(V['human'])} by people ({pct(V['human'], V['all'])}) · {esc(views_period(V))}"))
+        cards.append(("File requests" if V["with_history"] >= V["files"] else "File requests so far", big(V["all"]),
+                      f"{big(V['human'])} not flagged as automated ({pct(V['human'], V['all'])}) · {esc(views_period(V))}"))
     if U:
         cards += [("Files used on other wikis", fmt(U["all"]["files_used"]), f"{pct(U['all']['files_used'], total)} of all files"),
                   ("Pages using the files", fmt(U["all"]["pages"]), f"on {fmt(U['all']['wikis'])} wikis · {fmt(U['all']['usages'])} uses")]
     if C:
         cut = datetime.fromisoformat(snap["taken_at"]).timestamp() - 30 * 86400
         new = sum(1 for u in C["users"] if datetime.fromisoformat(u[2].replace("Z", "+00:00")).timestamp() >= cut)
-        cards.append(("Contributors", fmt(len(C["users"])), f"{fmt(new)} new in the last 30 days"))
+        cards.append(("Uploaders", fmt(len(C["users"])), f"{fmt(new)} new in the last 30 days"))
     if P:
         cards.append(("Geocoded files", fmt(P["geocoded"]), f"{pct(P['geocoded'], P['files'])} of files"))
         if P.get("size"):
@@ -515,20 +576,20 @@ def project_report(D, generated):
             y[0] += a
             y[1] += h
         partial = V["with_history"] < V["files"]
-        body.append(section("Views", kpis([
-            ("All views" + (" so far" if partial else ""), big(V["all"]), fmt(V["all"])),
-            ("Views by people", big(V["human"]), pct(V["human"], V["all"]) + " of all views"),
-            ("Views by bots and crawlers", big(V["all"] - V["human"]), pct(V["all"] - V["human"], V["all"])),
+        body.append(section("File requests", kpis([
+            ("All file requests" + (" so far" if partial else ""), big(V["all"]), fmt(V["all"])),
+            ("Not flagged as automated", big(V["human"]), pct(V["human"], V["all"]) + " of all requests"),
+            ("Flagged as automated", big(V["all"] - V["human"]), pct(V["all"] - V["human"], V["all"])),
             ("Files counted", fmt(V["with_history"]), f"of {fmt(V['files'])}, through {esc(views_period(V))}")])
-            + '<div class="chartbox"><h3>Views per month</h3>' + chart(months, colors=(MUTED, ACCENT), legend=["All views", "By people"])
-            + "<h3>All-time views (running total)</h3>" + chart(running_total([(m, a) for m, a, _ in months]), "area") + "</div>"
-            + table(["Year", "All views", "By people", "Share by people"],
+            + '<div class="chartbox"><h3>File requests per month</h3>' + chart(months, colors=(MUTED, ACCENT), legend=["All file requests", "Not flagged as automated"])
+            + "<h3>File requests (running total)</h3>" + chart(running_total([(m, a) for m, a, _ in months]), "area") + "</div>"
+            + table(["Year", "All file requests", "Not flagged as automated", "Share not flagged"],
                     [[y, fmt(a), fmt(h), pct(h, a)] for y, (a, h) in sorted(years.items())], num=(1, 2, 3))
-            + "<h3>Most viewed files</h3>" + thumbs([r[0] for r in V["top_files"][:8]])
-            + table(["File", "Uploaded by", "All views", "By people"],
-                    [[link(t), esc(u or "—"), fmt(a), fmt(h)] for t, a, h, u in V["top_files"][:25]], num=(2, 3))
-            + "<h3>Most viewed categories</h3>"
-            + table(["Category", "Files", "All views", "By people"],
+            + "<h3>Most requested files</h3>" + thumbs([r[0] for r in V["top_files"][:8]])
+            + table(["File", "Uploaded by", "All file requests", "Not flagged as automated"],
+                    [[link(t), esc(shown(u) if u else "—"), fmt(a), fmt(h)] for t, a, h, u in V["top_files"][:25]], num=(2, 3))
+            + "<h3>Most requested categories</h3>"
+            + table(["Category", "Files", "All file requests", "Not flagged as automated"],
                     [[link(t), fmt(n), fmt(a), fmt(h)] for t, a, h, n in V["categories"][:20]], num=(1, 2, 3)),
             f"How often each file itself was loaded (Wikimedia media requests). All figures cover {esc(views_period(V))}: complete "
             "months that every file has been counted through."
@@ -551,7 +612,7 @@ def project_report(D, generated):
             + '<div class="cols"><div><h3>Most used files</h3>' + table(
                 ["File", "Uses", "Wikis"], [[link(r[0]), fmt(r[2]), fmt(r[3])] for r in a["top_files"][:20]], num=(1, 2))
             + "</div><div><h3>Uploaders whose files are used most</h3>" + table(
-                ["Uploader", "Files used", "Uses"], [[esc(r[0]), fmt(r[2]), fmt(r[3])] for r in sorted(a["by_uploader"], key=lambda r: -r[3])[:20]], num=(1, 2))
+                ["Uploader", "Files used", "Uses"], [[esc(shown(r[0])), fmt(r[2]), fmt(r[3])] for r in sorted(a["by_uploader"], key=lambda r: -r[3])[:20]], num=(1, 2))
             + "</div></div><h3>Categories with the most used files</h3>" + table(
                 ["Category", "Files", "Files used", "Share used", "Uses"],
                 [[link(r[0]), fmt(r[1]), fmt(r[2]), pct(r[2], r[1]), fmt(r[3])] for r in a["by_category"][:20]], num=(1, 2, 3, 4)),
@@ -600,9 +661,9 @@ def project_report(D, generated):
                 ["Month", "Quality", "Featured", "Valued", "Featured media"],
                 [[month_name(m), *(fmt(monthly[m].get(k, 0)) for k in ("qi", "fp", "vi", "fm"))] for m in sorted(monthly, reverse=True)],
                 num=(1, 2, 3, 4))
-            + "<h3>Contributors with assessed files</h3>" + table(
-                ["Contributor", "Quality", "Featured", "Valued", "Featured media", "POTD", "MOTD"],
-                [[esc(u), *(fmt(n.get(k, 0)) for k in ("qi", "fp", "vi", "fm", "potd", "motd"))] for u, n in by_user[:30]],
+            + "<h3>Uploaders with assessed files</h3>" + table(
+                ["Uploader", "Quality", "Featured", "Valued", "Featured media", "POTD", "MOTD"],
+                [[esc(shown(u)), *(fmt(n.get(k, 0)) for k in ("qi", "fp", "vi", "fm", "potd", "motd"))] for u, n in by_user[:30]],
                 num=(1, 2, 3, 4, 5, 6), note=f"Top 30 of {fmt(len(by_user))}." if len(by_user) > 30 else None)))
         if mp_rows:
             body.append(section("On the main page", kpis([
@@ -619,7 +680,7 @@ def project_report(D, generated):
                     num=(1,)),
                 "Picture or media of the day on Commons (exact) and on other wikis (recognised from page names)."))
 
-    # Contributors
+    # Uploaders
     if C:
         users = C["users"]
         counts = sorted(u[1] for u in users)
@@ -644,22 +705,23 @@ def project_report(D, generated):
         vb = (V or {}).get("by_user", {})
         ab = (A or {}).get("by_user", {})
         gb = ((P or {}).get("gap") or {}).get("by_user", {})
-        body.append(section("Contributors", kpis([
-            ("Contributors", fmt(len(users)), None),
+        body.append(section("Uploaders", kpis([
+            ("Uploaders", fmt(len(users)), None),
             ("New in the last 30 days", fmt(sum(1 for u in users if ts(u[2]) >= cut)), "first upload in that time"),
             ("Active in the last 30 days", fmt(sum(1 for u in users if ts(u[3]) >= cut)), "uploaded at least one file"),
             ("Top 10 uploaded", pct(top10, total), "of all files"),
-            ("Median per contributor", fmt(median), "files")])
-            + '<div class="chartbox"><h3>Contributors over time (running total)</h3>'
+            ("Median per uploader", fmt(median), "files")])
+            + '<div class="chartbox"><h3>Uploaders over time (running total)</h3>'
             + chart(running_total(sorted(new_by.items())), "area")
             + "<h3>People uploading each month</h3>" + chart(sorted(active_by.items())) + "</div>"
-            + "<h3>How much people upload</h3>" + table(["Uploaded", "Contributors", "Share", "Files", "Share of files"], group_rows, num=(1, 2, 3, 4))
-            + "<h3>Top contributors</h3>" + table(
-                ["#", "Contributor", "Files", "Share", "First upload", "Latest upload", "Used on wikis", "Quality", "Views"],
-                [[str(i + 1), esc(u[0]), fmt(u[1]), pct(u[1], total), day(u[2]), day(u[3]), fmt(u[4]),
+            + "<h3>How much people upload</h3>" + table(["Uploaded", "Uploaders", "Share", "Files", "Share of files"], group_rows, num=(1, 2, 3, 4))
+            + "<h3>Top uploaders</h3>" + table(
+                ["#", "Uploader", "Files", "Share", "First upload", "Latest upload", "Used on wikis", "Quality", "File requests"],
+                [[str(i + 1), esc(shown(u[0])), fmt(u[1]), pct(u[1], total), day(u[2]), day(u[3]), fmt(u[4]),
                   fmt(ab.get(u[0], {}).get("qi", 0)), big(vb[u[0]][0]) if u[0] in vb else "—"] for i, u in enumerate(users[:40])],
-                num=(0, 2, 3, 6, 7, 8), note=f"Top 40 of {fmt(len(users))}. Each contributor's own report has the full statistics."),
-            f"People who uploaded the {fmt(total)} files now in the project (the original uploader of each file). Months are in UTC."))
+                num=(0, 2, 3, 6, 7, 8), note=f"Top 40 of {fmt(len(users))}. Each uploader's own report has the full statistics."),
+            f"Accounts that first uploaded the {fmt(total)} files now in the project (definition D05; an uploader may not be the "
+            "author or photographer, limitation L09). Months are in UTC."))
         body[-1] = body[-1].replace("<section>", '<section class="break">', 1)
 
     # Places, devices, timing and size
@@ -695,7 +757,7 @@ def project_report(D, generated):
                             "From each file's location on Commons and the camera metadata (EXIF) of the current version."))
 
     title = "Project Korikath statistics report"
-    return title, page(title, "Wikimedia Commons · Project Korikath", meta, "".join(body))
+    return title, page(title, "Wikimedia Commons · Project Korikath", meta, "".join(body), manifest)
 
 
 # ----------------------------------------------------------- contributor report
@@ -765,14 +827,16 @@ def contributor_details(name, cutoff=None):
     return out
 
 
-def user_report(D, name, generated):
+def user_report(D, name, generated, manifest=None):
     C = D.get("contributors")
     if not C:
-        raise RuntimeError("Contributor statistics aren't available yet.")
+        raise RuntimeError("Uploader statistics aren't available yet.")
     users = C["users"]
     u = next((x for x in users if x[0] == name), None)
     if u is None:
-        raise KeyError(f"No contributor named {name!r} in the project.")
+        raise KeyError(f"No uploader named {name!r} in the project.")
+    if name in opted_out():
+        raise KeyError(f"{name} has asked not to be named in reports, so there is no report for this uploader.")
     snap, langs = D["snapshot"], D.get("languages") or {}
     A, V, P, U = (D.get(k) for k in ("assessments", "views", "places", "usage"))
     total = snap["total_files"]
@@ -787,7 +851,7 @@ def user_report(D, name, generated):
             ("Built on the crawl of", f"{esc(fmt_time(snap['taken_at']))}" + (f" ({esc(latest['mode'])} crawl)" if latest.get("taken_at") == snap["taken_at"] else "")),
             ("Commons", f'<a href="{esc(user_url)}">User page</a> · <a href="{esc(list_url)}">All this member&#39;s uploads</a>')]
     if V:
-        meta.append(("Views counted", f"{esc(views_period(V))} (complete months)"
+        meta.append(("File requests counted", f"{esc(views_period(V))} (complete months)"
                      + (f" · {fmt(V['with_history'])} of {fmt(V['files'])} project files so far" if V["with_history"] < V["files"] else "")))
 
     counts = (A or {}).get("by_user", {}).get(name, {})
@@ -801,7 +865,7 @@ def user_report(D, name, generated):
     non_image = sum(v for k, v in X["kinds"].items() if k != "image")
 
     cards = [("Files in the project", fmt(nfiles), f"{pct(nfiles, total)} of all files"),
-             ("Rank by files", f"#{fmt(rank)}", f"of {fmt(len(users))} contributors"),
+             ("Rank by files", f"#{fmt(rank)}", f"of {fmt(len(users))} uploaders"),
              ("First upload", day(first), None), ("Latest upload", day(last), None),
              ("Active months", fmt(len(per_month)), "months with at least one upload"),
              ("Categories", fmt(ncats), "this member's files are filed in"),
@@ -815,9 +879,9 @@ def user_report(D, name, generated):
         cards.append(("Times on a main page", fmt(sum(r["times"] for r in mp_rows)),
                       f"{fmt(len(mp_rows))} files on {fmt(len(mp_wikis))} wikis" if mp_rows else None))
     if V:
-        cards.append(("Views" + (" so far" if V["with_history"] < V["files"] else ""), big(tot_views[0]),
-                      f"{big(tot_views[1])} by people ({pct(tot_views[1], tot_views[0])})"
-                      + (f" · #{fmt(views_rank)} by views" if views_rank else "")))
+        cards.append(("File requests" + (" so far" if V["with_history"] < V["files"] else ""), big(tot_views[0]),
+                      f"{big(tot_views[1])} not flagged as automated ({pct(tot_views[1], tot_views[0])})"
+                      + (f" · #{fmt(views_rank)} by file requests" if views_rank else "")))
     if X["sized"]:
         cards.append(("Size of this member's files", nbytes(X["size"]), f"average {nbytes(X['size'] / X['sized'])}"))
     cards.append(("Geocoded files", fmt(X["geocoded"]), pct(X["geocoded"], nfiles) + " of this member's files"))
@@ -844,11 +908,11 @@ def user_report(D, name, generated):
     if V and X["views"]:
         vm = sorted((m, a, h) for m, (a, h) in X["view_months"].items())
         top = sorted(X["views"].items(), key=lambda kv: -kv[1][0])
-        body.append(section("Views", '<div class="chartbox"><h3>Views per month</h3>'
-                            + chart(vm, colors=(MUTED, ACCENT), legend=["All views", "By people"])
-                            + "<h3>All-time views (running total)</h3>" + chart(running_total([(m, a) for m, a, _ in vm]), "area") + "</div>"
-                            + "<h3>Most viewed files</h3>" + thumbs([t for t, _ in top[:8]])
-                            + table(["File", "All views", "By people"], [[link(t), fmt(a), fmt(h)] for t, (a, h) in top[:25]], num=(1, 2)),
+        body.append(section("File requests", '<div class="chartbox"><h3>File requests per month</h3>'
+                            + chart(vm, colors=(MUTED, ACCENT), legend=["All file requests", "Not flagged as automated"])
+                            + "<h3>File requests (running total)</h3>" + chart(running_total([(m, a) for m, a, _ in vm]), "area") + "</div>"
+                            + "<h3>Most requested files</h3>" + thumbs([t for t, _ in top[:8]])
+                            + table(["File", "All file requests", "Not flagged as automated"], [[link(t), fmt(a), fmt(h)] for t, (a, h) in top[:25]], num=(1, 2)),
                             f"How often this member's files were loaded, from January 2015; {fmt(len(X['views']))} of "
                             f"{fmt(nfiles)} files counted so far."))
 
@@ -894,8 +958,8 @@ def user_report(D, name, generated):
     if parts or extra:
         body.append(section("Devices, timing and size", f'<div class="cols">{"".join(parts)}</div>{extra}'))
 
-    title = f"{name}: contributor statistics"
-    return title, page(title, "Project Korikath · contributor report", meta, "".join(body))
+    title = f"{name}: uploader statistics"
+    return title, page(title, "Project Korikath · uploader report", meta, "".join(body), manifest)
 
 
 # ------------------------------------------------------------------------- PDF
@@ -951,39 +1015,491 @@ def safe_name(name):
     return keep[:60] or "contributor"
 
 
-def make_report(user=None, out_dir=OUT_DIR):
-    """Build a report PDF and return its path. The file name holds the time it was generated (UTC)."""
-    generated = datetime.now(timezone.utc)
-    D = dashboard_data()
-    if user:
-        _, page_html = user_report(D, user, generated)
-        name = f"Korikath_contributor_{safe_name(user)}_{file_stamp(generated)}.pdf"
+# ------------------------------------------------------------------ reliability pages
+# Everything below is generated from the report's manifest (issuance.py) and the methodology register, so the
+# explanation of how far the report can be relied on always matches what was actually done.
+
+GLOSSARY = [
+    ("Wikimedia Commons", "The Wikimedia project that hosts freely licensed media files used by Wikipedia and other wikis."),
+    ("Category tree", "The category Category:Project Korikath and every category below it, at any depth."),
+    ("Page ID", "Commons' permanent number for a page. It stays the same when a file is renamed, so files are matched by it."),
+    ("Crawl", "One complete reading of the category tree by the tracker. A full crawl re-reads every category; a quick check "
+              "re-reads only what changed (limitation L02)."),
+    ("Snapshot", "The saved result of one crawl: every category and every file in the tree at that time."),
+    ("On-wiki usage", "A file being shown on a page of another Wikimedia wiki, as recorded by that wiki (GlobalUsage)."),
+    ("File request", "One request to Wikimedia's servers for a file or a thumbnail of it. Counted by Wikimedia's media request "
+                     "statistics; not the same as a person viewing it (limitation L04)."),
+    ("Not flagged as automated", "File requests Wikimedia classifies as coming from a user agent rather than a known bot or "
+                                 "crawler (agent type 'user')."),
+    ("Uploader", "The account that uploaded the first version of a file."),
+    ("Quality / Featured / Valued image", "Files that passed the Commons community's assessment processes, as recorded by the "
+                                          "Commons-wide categories that the assessment templates maintain."),
+    ("POTD / MOTD", "Picture / Media of the Day: a file shown on a wiki's main page for a day."),
+    ("EXIF", "Camera metadata stored inside an image file: device, time taken, sometimes GPS position."),
+    ("SHA-256 fingerprint", "A 64-character code computed from the exact bytes of a file or record. Any change, however "
+                            "small, gives a completely different fingerprint."),
+    ("Archive state", "A record of every data file and code file of the tracker at one moment, each identified by its "
+                      "SHA-256 fingerprint and stored once."),
+    ("FINAL / PROVISIONAL", "FINAL: every error and freshness check passed. PROVISIONAL: at least one did not; the reasons are on "
+                            "the cover. Only FINAL reports are meant to be cited."),
+]
+
+
+def _source_of(dataset):
+    import provenance
+    for _pattern, name, source, _desc in provenance.DATASETS:
+        if name == dataset:
+            return source
+    return ""
+
+
+def data_line(datasets, defs):
+    """A section's source line: which data it rests on (as of when, how complete) and which definitions apply."""
+    m = RENDER.get("manifest")
+    if not m:
+        return ""
+    rows = {r["dataset"]: r for r in m.get("data_status") or []}
+    parts = []
+    for ds in datasets:
+        r = rows.get(ds)
+        if not r:
+            continue
+        when = r["as_of"] if r["as_of"] and len(str(r["as_of"])) == 10 else fmt_time(r["as_of"]) if r["as_of"] else "—"
+        cov = f", {fmt(r['covered'])} of {fmt(r['of'])} files" if r.get("of") is not None and r.get("share") is not None and r["share"] < 1 else ""
+        parts.append(f"{esc(r['label'])} as of {esc(when)}{cov}")
+    sources = sorted({_source_of(ds) for ds in datasets} - {""})
+    return (f'<p class="src"><b>Data:</b> {"; ".join(parts) or "—"}. <b>Definitions:</b> {", ".join(defs) or "—"} '
+            f'(appendix B). <b>Source:</b> {esc("; ".join(sources))}.</p>')
+
+
+SOURCES = {  # section title -> (datasets it rests on, definitions that apply)
+    "Headline numbers": (["snapshot", "uploads", "mediatypes", "assessments", "usage", "views", "geo", "exif"],
+                         ["D01", "D02", "D05", "D06", "D07", "D08", "D09", "D12", "D13", "D15", "D16", "D17"]),
+    "Growth of the collection": (["snapshot", "uploads"], ["D01", "D04"]),
+    "Kinds of media": (["snapshot", "mediatypes", "exif"], ["D06", "D17"]),
+    "Category tree": (["snapshot"], ["D01", "D02"]),
+    "Changes": (["snapshot"], ["D03", "D11"]),
+    "File requests": (["views"], ["D12", "D13", "D18"]),
+    "On-wiki usage": (["usage"], ["D09"]),
+    "Latest usage changes": (["usage"], ["D10", "D11"]),
+    "Usage checks": (["usage"], ["D09", "D10"]),
+    "Quality, featured and valued": (["assessments"], ["D07", "D08"]),
+    "On the main page": (["assessments", "usage"], ["D08"]),
+    "Uploaders": (["uploads", "views", "assessments"], ["D04", "D05", "D18"]),
+    "Places, devices and size": (["geo", "exif"], ["D14", "D15", "D16", "D17", "D18"]),
+    "Uploads": (["uploads"], ["D04"]),
+    "Files by category": (["snapshot"], ["D01"]),
+    "Devices, timing and size": (["exif"], ["D14", "D16", "D17"]),
+}
+
+
+def cover(manifest, meta_rows):
+    m = manifest
+    status = m["status"]
+    issuer = m.get("issuer") or {}
+    rows = [("Report ID", f"<b>{esc(m['report_id'])}</b>"),
+            ("Status", f'<span class="badge {status.lower()}">{status}</span>'
+                       + ("" if status == "FINAL" else " Not for citation: see the reasons below.")),
+            ("Fingerprint", f'<span class="mono">{esc(m["fingerprint"])}</span>'),
+            ("Issued by", esc(", ".join(x for x in (issuer.get("name"), issuer.get("role"), issuer.get("contact")) if x)
+                              or "not named (config.json: issuer)"))]
+    rows += meta_rows
+    rows += [("Made with", f"Korikath Tracker {esc(m['build']['tool_version'])}, method {esc(m['build']['method_version'])}"
+                           + (f", code commit {esc(m['build']['git_commit'])}" if m["build"].get("git_commit") else "")),
+             ("Verify", "This PDF's SHA-256 fingerprint is recorded in the tracker's register of issued reports"
+                        + (f", published at <a href=\"{esc(m['register_url'])}\">{esc(m['register_url'])}</a>" if m.get("register_url") else "")
+                        + ". Appendix H explains how to check it."),
+             ("Times", "All times in this report are UTC (Coordinated Universal Time).")]
+    out = "".join(f"<b>{esc(k)}</b><span>{v}</span>" for k, v in rows)
+    reasons = ""
+    if status != "FINAL":
+        reasons = ('<div class="reasons"><b>Why this report is provisional:</b><ul>'
+                   + "".join(f"<li>{esc(r)}</li>" for r in m.get("reasons") or []) + "</ul></div>")
+    return f'<div class="meta">{out}</div>{reasons}'
+
+
+def trust_section(m):
+    checks = m.get("checks") or []
+    passed = sum(1 for c in checks if c["result"] == "passed")
+    spot = next((c for c in checks if c["id"] == "W02"), None)
+    pet = next((c for c in checks if c["id"] == "W01"), None)
+    lic = esc(m.get("licence") or "CC BY 4.0")
+    p = [
+        ("Where the numbers come from",
+         "Every figure in this report was computed by the Korikath Tracker from public data published by Wikimedia: the "
+         "Wikimedia Commons API (files, categories, uploaders, usage on other wikis, assessments, file metadata) and the "
+         "Wikimedia Analytics API (file requests). No figure was typed in by hand. All text comes from fixed templates in "
+         "the tracker's code, filled in with the figures; nothing is written or edited by hand for an individual report."),
+        ("A fixed point in time",
+         "Commons changes every minute. This report describes the project as it was at the times in the table "
+         "\"Data used in this report\": each kind of data was collected at its own time, and the table says when and how "
+         "completely. Later changes are not included."),
+        ("Can it be reproduced?",
+         f"Yes. Just before this report was made, the tracker recorded every data file and every code file it used "
+         f"(archive state {esc(m['archive_state'])}, fingerprint {esc(m['archive_state_sha256'][:16])}…). "
+         "From that record the whole report can be regenerated at any time and compared, figure by figure, with this "
+         "one (the tracker's --rebuild command does this). Running the same queries against Wikimedia today would give "
+         "slightly different numbers, because the wikis have changed since; that is why the data is kept."),
+        ("Has it been altered?",
+         f"This report's fingerprint is {esc(m['fingerprint'][:16])}…, computed from its data, figures, checks and "
+         "versions. The PDF file's own SHA-256 fingerprint is recorded in the tracker's register of issued reports, a "
+         "list in which every entry is chained to the one before it, so entries can't be changed or removed unnoticed. "
+         "If a copy's fingerprint is not in the register, it is not an issued report (appendix H)."),
+        ("What exactly is counted",
+         f"Every figure follows a written definition (appendix B). This report uses method version "
+         f"{esc(m['build']['method_version'])}; when a definition changes, the method version changes and the change is "
+         "recorded (appendix E)."),
+        ("How complete it is",
+         "Where a figure does not cover every file of the project, it says so, and each section ends with a line naming "
+         "the data it rests on, as of when, and the definitions that apply."),
+        ("How it was checked",
+         f"Before this report was issued, the tracker ran {len(checks)} checks ({passed} passed; section 2): totals add up, "
+         "every data file matches its recorded fingerprint, the rules match the recorded method version, the archive "
+         "is intact, the data is recent and complete"
+         + (f"; {esc(spot['detail'])} in a live spot check" if spot and spot["result"] == "passed" else "")
+         + (f"; and an independent count with PetScan: {esc(pet['detail'])}" if pet and pet["result"] == "passed" else "")
+         + f". The status is <b>{m['status']}</b>" + (": every error and freshness check passed." if m["status"] == "FINAL"
+                                                       else ": see the reasons on the cover.")),
+        ("What it cannot tell you",
+         "Some things are inferred or not visible to the tracker. For example, file requests include thumbnails and "
+         "cannot fully separate people from automated traffic, and the uploader of a file is not always the person who "
+         "took the photo. Appendix C lists every known limitation."),
+        ("Licences and privacy",
+         f"This report is published under {lic}. Images are shown only with their author and licence, and never when "
+         "they are marked as showing identifiable people. Uploader names are public Wikimedia usernames; an uploader can "
+         "ask not to be named. This report is produced independently by Project Korikath and is not produced or "
+         "endorsed by the Wikimedia Foundation (appendix F)."),
+        ("Found a mistake?",
+         "Contact the issuer named on the cover, quoting the report ID. Corrections are recorded in the register, and a "
+         "corrected report replaces this one; checking a superseded report says so."),
+    ]
+    body = "".join(f"<h3>{esc(t)}</h3><p>{x}</p>" for t, x in p)
+    return f'<section class="trust"><h2>1. How to rely on this report</h2>{body}</section>'
+
+
+def checks_section(m):
+    rows = [[f'<span class="nw">{esc(c["id"])}</span>', esc({"error": "Error", "freshness": "Freshness", "warning": "Cross-check"}[c["level"]]),
+             esc(c["name"]), f'<span class="nw res {c["result"].replace(" ", "")}">{esc(c["result"])}</span>', esc(c["detail"])]
+            for c in m.get("checks") or []]
+    return section("2. Checks before issue", table(["ID", "Kind", "Check", "Result", "Detail"], rows),
+                   "Run automatically just before this report was made. Any failed error or freshness check makes the report "
+                   "PROVISIONAL; cross-checks are independent comparisons, reported whatever their result.")
+
+
+def appendices(m, D):
+    import methodology
+    out = []
+    # A. Methods
+    meth = [
+        "The tracker reads the category tree below Category:Project Korikath on Wikimedia Commons at unlimited depth, "
+        "and counts each file once by its page ID (definition D01). A full crawl re-reads every category; a quick check "
+        "reads Commons' category counters and re-reads in full every category whose counts don't add up (limitation L02).",
+        "Each crawl is saved as a snapshot and compared with the previous one; differences are matched by page ID, and "
+        "the edit that caused each change is looked up (D03, D11).",
+        "Upload dates, uploaders, media types, locations and camera metadata are looked up once per file and re-checked "
+        f"on a rolling basis (each day 1/{methodology.ROTATION_DAYS} of the files, so every file once a month). On-wiki usage and assessments are "
+        "checked after every crawl. File requests are collected per file from Wikimedia's media request statistics and "
+        "totalled to a common cutoff month (D12).",
+        "All figures in this report are computed from those saved data files by the tracker's code at the version on the "
+        "cover; the same code and data regenerate them exactly.",
+        "Every data file carries a record of where it came from, when, how complete it is and its fingerprint; every run "
+        "of the tracker is recorded; every state of the data is archived.",
+    ]
+    out.append(section("Appendix A. How this report was made", "".join(f"<p>{esc(x)}</p>" for x in meth)))
+    # B. Definitions
+    out.append(section("Appendix B. Definitions", table(
+        ["ID", "Name", "Definition", "Unit", "Known limitations"],
+        [[f'<span class="nw">{esc(d["id"])}</span>', esc(d["name"]), esc(d["definition"] + (f" Excludes: {d['excludes']}" if d.get("excludes") else "")),
+          esc(d["unit"]), esc(", ".join(d.get("limits") or []))] for d in methodology.DEFINITIONS]),
+        f"Method version {esc(m['build']['method_version'])}. The source of each definition's data is in appendix D."))
+    # C. Limitations
+    notes = limitation_notes(D)
+    out.append(section("Appendix C. Known limitations", table(
+        ["ID", "Limitation", "In this report"],
+        [[f'<span class="nw">{esc(x["id"])}</span>', esc(x["text"]), esc(notes.get(x["id"], ""))] for x in methodology.LIMITATIONS])))
+    # D. Provenance
+    import provenance
+    state = m.get("state_files") or {}
+    rows = [[esc(rel), f'<span class="mono">{esc(h[:16])}…</span>'] for rel, h in sorted(state.items())
+            if not rel.endswith((".py", ".html", ".md", ".bat")) and not rel.startswith(("logs/", "runs/", "snapshots/", "reports/"))]
+    srcs = [[esc(name), esc(src)] for _p, name, src, _d in provenance.DATASETS]
+    out.append(section("Appendix D. Provenance", f"<p>Archive state <b>{esc(m['archive_state'])}</b>, SHA-256 "
+        f'<span class="mono">{esc(m["archive_state_sha256"])}</span>. Figures fingerprint <span class="mono">'
+        f'{esc(m["figures_sha256"])}</span>. Code: Korikath Tracker {esc(m["build"]["tool_version"])}, commit '
+        f'{esc(m["build"].get("git_commit") or "—")}, Python {esc(m["build"]["python"])}. Requests to Wikimedia were sent '
+        f'one at a time, identified as: {esc(m.get("user_agent") or "")}.</p>'
+        + "<h3>Data files used</h3>" + table(["File", "SHA-256 (first 16 characters)"], rows)
+        + "<h3>Where each kind of data comes from</h3>" + table(["Data", "Source"], srcs)))
+    # E. Versions and corrections
+    versions = methodology.recorded()
+    import issuance
+    errata = [e for e in issuance.entries() if e["event"] == "superseded"]
+    out.append(section("Appendix E. Method versions and corrections",
+        table(["Method version", "Since", "Fingerprint of its rules"],
+              [[esc(k), esc(v["date"]), f'<span class="mono">{esc(v["fingerprint"][:16])}…</span>'] for k, v in versions.items()])
+        + "<p>Each version's changes, and which figures they affect, are described in the tracker's CHANGELOG.md.</p>"
+        + "<h3>Corrections to earlier reports</h3>"
+        + (table(["Report", "Replaced by", "Reason"], [[esc(e["report_id"]), esc(e["superseded_by"]), esc(e["reason"])] for e in errata])
+           if errata else "<p>None.</p>")))
+    # F. Licences, credits, privacy
+    credits = [(t, c) for t, c in (m.get("credits") or {}).items() if c.get("show")]
+    out.append(section("Appendix F. Licences, credits and privacy",
+        f"<p><b>This report</b> is published under {esc(m.get('licence') or 'CC BY 4.0')}. Images in it remain under their "
+        "own licences, credited below and under each image.</p>"
+        "<p><b>Data.</b> File, category, usage and assessment data come from Wikimedia Commons and the other Wikimedia "
+        "wikis through their public APIs; file-request statistics come from the Wikimedia Analytics API. They are used "
+        "under the terms Wikimedia publishes them with.</p>"
+        "<p><b>Not affiliated.</b> This report is produced independently by Project Korikath. It is not produced or "
+        "endorsed by the Wikimedia Foundation. \"Wikimedia Commons\" and \"Wikipedia\" are named only to refer to them.</p>"
+        "<p><b>Privacy.</b> Uploaders are named by their public Wikimedia usernames, with figures from public data only. "
+        "No locations of individual uploaders' photos are shown. An uploader can ask the issuer not to be named; they are "
+        "then counted in every total but named nowhere. Images marked as showing identifiable people (personality "
+        "rights) are not reproduced.</p>"
+        + ("<h3>Image credits</h3>" + table(["File", "Author", "Licence"],
+                                           [[link(t, short(t)), esc(c["author"]), f'<a href="{esc(c["licence_url"])}">{esc(c["licence"])}</a>'
+                                             if c.get("licence_url") else esc(c["licence"])] for t, c in credits]) if credits else "")))
+    # G. Glossary
+    out.append(section("Appendix G. Glossary", table(["Term", "Meaning"], [[esc(a), esc(b)] for a, b in GLOSSARY])))
+    # H. How to verify
+    steps = [
+        "Compute the PDF file's SHA-256 fingerprint. On Windows: <span class=mono>certutil -hashfile report.pdf SHA256</span>; "
+        "on macOS or Linux: <span class=mono>shasum -a 256 report.pdf</span>.",
+        "Look it up in the register of issued reports" + (f" (<a href=\"{esc(m['register_url'])}\">{esc(m['register_url'])}</a>)"
+                                                          if m.get("register_url") else ", which the issuer can provide")
+        + f". It must be listed with this report's ID, {esc(m['report_id'])}, and status. If it is missing, the file is not "
+          "an issued report or has been changed.",
+        "Check the status there: a report replaced by a correction is marked SUPERSEDED, with the ID of the report that "
+        "replaces it.",
+        "Spot-check any figure: every file, category and page is linked to Wikimedia, and the definitions are in "
+        "appendix B. Small differences are expected for figures that have changed since the dates in \"Data used\".",
+        "To check every figure, the issuer can regenerate the report from its archive state "
+        "(<span class=mono>python report.py --rebuild " + esc(m["report_id"]) + "</span>), which recomputes all figures "
+        "from the recorded data and code and compares them with the issued ones.",
+    ]
+    out.append(section("Appendix H. How to verify this report", "<ol>" + "".join(f"<li>{x}</li>" for x in steps) + "</ol>"))
+    out[0] = out[0].replace("<section>", '<section class="break">', 1)
+    return "".join(out)
+
+
+def limitation_notes(D):
+    """What some limitations amount to in this report's own data."""
+    notes = {}
+    V, P, M = D.get("views"), D.get("places"), D.get("media")
+    full = [h for h in D.get("history") or [] if h.get("mode") == "full"]
+    if full:
+        notes["L02"] = f"Latest full crawl: {fmt_time(full[-1]['taken_at'])}."
+    if V:
+        notes["L06"] = (f"{fmt(V['with_history'])} of {fmt(V['files'])} files counted; totals to {views_period(V)}; "
+                        f"{fmt((V.get('after_cutoff') or [0])[0])} later requests left out.")
+    if P:
+        notes["L10"] = (f"{fmt(P['no_device_info'])} files without device data"
+                        + (f"; {fmt(P['gap']['wrong_clock'])} with a wrong camera clock" if P.get("gap") else "") + ".")
+    if M:
+        notes["L14"] = f"{fmt(M.get('other', 0))} files of another type."
+    C = D.get("contributors")
+    if C:
+        notes["L09"] = f"{fmt(C.get('unknown', 0))} files with no known uploader."
+    U = D.get("usage")
+    if U and U.get("checks"):
+        ck = U["checks"][-1]
+        rows = ck["removed"] + ck["added"]
+        if rows:
+            found = sum(1 for r in rows if len(r) > 11 and r[9])
+            notes["L17"] = f"Latest usage check: the edit was found for {found} of {len(rows)} changes."
+    return notes
+
+
+def fetch_credits(titles, config):
+    """{title: {author, licence, licence_url, show, reason}} for the files whose thumbnails a report shows, from each
+    file's description page (extmetadata). A thumbnail is shown only with an author and a licence, and, in the default
+    "safe" mode, never for a file marked as showing identifiable people (personality rights)."""
+    mode = (config.get("thumbnails") or "safe").lower()
+    out = {t: {"show": False, "reason": "thumbnails switched off"} for t in titles} if mode == "none" else {}
+    if mode == "none" or not titles:
+        return out
+    api = tracker.CommonsAPI(config["user_agent"])
+    titles = sorted(titles)
+    for i in range(0, len(titles), 50):
+        batch = titles[i:i + 50]
+        for data in api.query_all(prop="imageinfo", titles="|".join(batch), iiprop="extmetadata",
+                                  iiextmetadatafilter="Artist|LicenseShortName|LicenseUrl|Restrictions|Credit"):
+            names = {n["to"]: n["from"] for n in data["query"].get("normalized", [])}
+            for page in data["query"]["pages"]:
+                t = names.get(page.get("title"), page.get("title"))
+                em = ((page.get("imageinfo") or [{}])[0]).get("extmetadata") or {}
+                val = lambda k: html.unescape(re.sub(r"<[^>]+>", "", str((em.get(k) or {}).get("value") or ""))).strip()  # noqa: E731
+                author, lic, url, restr = val("Artist"), val("LicenseShortName"), val("LicenseUrl"), val("Restrictions").lower()
+                if "personality" in restr and mode == "safe":
+                    out[t] = {"show": False, "reason": "shows identifiable people"}
+                elif not author or not lic:
+                    out[t] = {"show": False, "reason": "author or licence not stated on Commons"}
+                else:
+                    out[t] = {"show": True, "author": author[:120], "licence": lic, "licence_url": url}
+    for t in titles:
+        out.setdefault(t, {"show": False, "reason": "not found on Commons"})
+    return out
+
+
+def normalised(D):
+    """The figures, without what depends on the moment rather than the data (whether a job happens to be running)."""
+    if D.get("views"):
+        D["views"] = {k: v for k, v in D["views"].items() if k != "running"}
+    return D
+
+
+def render_html(D, manifest):
+    """The report page for figures D and an issued report's manifest. Deterministic: the same data, code and
+    manifest give the same page, byte for byte (which is what --rebuild checks)."""
+    D = dict(D, data_status=manifest["data_status"], build=manifest["build"])
+    RENDER.update(manifest=manifest, credits=manifest.get("credits") or {}, wanted=None, data=D)
+    generated = datetime.fromisoformat(manifest["generated_at"].replace("Z", "+00:00"))
+    if manifest["type"] == "contributor":
+        _, page_html = user_report(D, manifest["subject"], generated, manifest)
     else:
-        _, page_html = project_report(D, generated)
-        name = f"Korikath_statistics_report_{file_stamp(generated)}.pdf"
-    pdf = html_to_pdf(page_html, Path(out_dir) / name)
-    # Keep the PDF and everything it was built from (the data embedded in dashboard.html and all data files):
-    # The PDF itself isn't kept (to save space): its SHA-256 is recorded with the state of all the data it was built
-    # from, so `python archive.py find <pdf>` can later tell whether a PDF was issued and from which data.
+        _, page_html = project_report(D, generated, manifest)
+    return page_html
+
+
+def wanted_thumbnails(D, kind, subject, generated, skeleton):
+    """The files whose thumbnails the report will show (a first, uncredited rendering collects them)."""
+    RENDER.update(manifest=None, credits={}, wanted=set(), data=D)
+    try:
+        if kind == "contributor":
+            user_report(D, subject, generated)
+        else:
+            project_report(D, generated)
+        return sorted(RENDER["wanted"])
+    finally:
+        RENDER["wanted"] = None
+
+
+def make_report(user=None, out_dir=OUT_DIR):
+    """Check, record, render, print and register a report. Returns the PDF's path. The file name holds the time it
+    was generated (UTC) and the end of its report ID."""
     import archive
-    import hashlib
-    figures = json.dumps({k: v for k, v in D.items() if k not in ("generated_at", "build")}, ensure_ascii=False,
-                         sort_keys=True, separators=(",", ":")).encode("utf-8")
-    archive.safe_record("report",
-                        extra={"pdf": name, "pdf_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
-                               "figures_sha256": hashlib.sha256(figures).hexdigest(),
-                               "report_type": "contributor" if user else "project", "contributor": user,
-                               "generated_at": generated.strftime("%Y-%m-%dT%H:%M:%SZ")})
+    import issuance
+    import validate
+    import version
+    config = tracker.load_json(BASE / "config.json", {})
+    kind, subject = ("contributor", user) if user else ("project", tracker.normalize_category(config["root_category"]))
+    if user and user in opted_out():
+        raise KeyError(f"{user} has asked not to be named in reports, so there is no report for this uploader.")
+    for attempt in range(2):
+        generated = datetime.now(timezone.utc).replace(microsecond=0)
+        # 1. The inputs: every data and code file as they are now, recorded in the archive (stored once each).
+        state_name, _n, _new, _size = archive.record_state("report-inputs", extra={"report_type": kind, "subject": subject})
+        state = json.loads((archive.STATES / state_name).read_text(encoding="utf-8"))
+        state_sha = hashlib.sha256((archive.STATES / state_name).read_bytes()).hexdigest()
+        # 2. The figures, from those files.
+        D = normalised(dashboard_data())
+        wanted = wanted_thumbnails(D, kind, subject, generated, None)  # also fails early for an unknown uploader
+        # 3. The checks, which decide the status.
+        figures_sha = issuance.figures_fingerprint(D)
+        checks = validate.run(D, now=generated, live=True, config=config, sample_seed=figures_sha)
+        # The data must not have changed while the report was being made (a job finishing meanwhile).
+        import provenance
+        now_hashes = provenance.hashes()
+        changed = [rel for rel, h in now_hashes.items() if state["files"].get(rel, {}).get("sha256") != h]
+        if not changed:
+            break
+        print(f"Data changed while the report was being made ({', '.join(changed[:3])}); starting again.")
+    else:
+        checks.append({"id": "E07", "level": "error", "name": "Data unchanged while the report was made",
+                       "result": "failed", "detail": f"changed: {', '.join(changed[:5])}"})
+    status, reasons = validate.status_of(checks)
+    try:
+        credits = fetch_credits(wanted, config)
+    except Exception as e:  # noqa: BLE001  without credits no image is shown
+        credits = {t: {"show": False, "reason": f"credits could not be checked ({type(e).__name__})"} for t in wanted}
+    core = {"type": kind, "subject": subject, "generated_at": generated.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "archive_state": state_name, "archive_state_sha256": state_sha, "figures_sha256": figures_sha,
+            "build": version.build_info(), "status": status, "reasons": reasons, "checks": checks,
+            "credits": credits, "data_status": D.get("data_status"), "issuer": config.get("issuer") or {},
+            "licence": config.get("report_licence") or "CC BY 4.0", "register_url": config.get("public_register_url"),
+            "user_agent": config.get("user_agent"),
+            "state_files": {rel: f["sha256"] for rel, f in state["files"].items()}}
+    rid = issuance.report_id(kind, generated, core)
+    manifest = {"report_id": rid, "fingerprint": issuance.sha256(issuance.canonical(core)), **core}
+    # 4. The page and the PDF.
+    page_html = render_html(D, manifest)
+    manifest["html_sha256"] = issuance.sha256(page_html)
+    stem = f"Korikath_contributor_{safe_name(user)}" if user else "Korikath_statistics_report"
+    name = f"{stem}_{file_stamp(generated)}_{rid[-8:]}{'' if status == 'FINAL' else '_PROVISIONAL'}.pdf"
+    pdf = html_to_pdf(page_html, Path(out_dir) / name)
+    manifest["pdf_sha256"] = hashlib.sha256(pdf.read_bytes()).hexdigest()
+    manifest["pdf_file_name"] = name
+    # 5. The register.
+    issuance.issue(manifest)
+    print(f"Issued {rid} ({status}); PDF SHA-256 {manifest['pdf_sha256']}")
     return pdf
+
+
+def rebuild(rid):
+    """Regenerate an issued report from its archive state, with the code recorded in that state, and compare."""
+    import archive
+    import issuance
+    m = issuance.load_manifest(rid)
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        folder = Path(tmp) / "state"
+        archive.restore(m["archive_state"], folder)
+        (folder / "manifest.json").write_text(json.dumps(m, ensure_ascii=False), encoding="utf-8")
+        out = subprocess.run([sys.executable, "report.py", "--render-html", "page.html", "--manifest", "manifest.json"],
+                             cwd=folder, capture_output=True, text=True, encoding="utf-8",
+                             creationflags=NO_WINDOW if os.name == "nt" else 0)
+        if out.returncode:
+            raise SystemExit(f"The recorded code could not regenerate the report:\n{out.stderr[-2000:]}")
+        got = json.loads(out.stdout.strip().splitlines()[-1])
+    ok_fig = got["figures_sha256"] == m["figures_sha256"]
+    ok_html = got["html_sha256"] == m["html_sha256"]
+    print(f"{rid}: regenerated from archive state {m['archive_state']} with the code recorded in it.")
+    print(f"  figures: {'identical' if ok_fig else 'DIFFERENT'} ({got['figures_sha256'][:16]}…)")
+    print(f"  page:    {'identical' if ok_html else 'DIFFERENT'} ({got['html_sha256'][:16]}…)")
+    print("  (The PDF's own bytes also hold the browser's print time, so the page, not the PDF, is compared.)")
+    return ok_fig and ok_html
 
 
 def main():
     if sys.stdout and hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser(description="Make a PDF statistics report of Project Korikath.")
-    ap.add_argument("--user", help="a contributor's report instead of the whole project")
+    ap.add_argument("--user", help="an uploader's report instead of the whole project")
     ap.add_argument("--out", default=str(OUT_DIR), help="folder to save the PDF in")
+    ap.add_argument("--verify", metavar="PDF", help="was this PDF issued by the tracker? its status?")
+    ap.add_argument("--rebuild", metavar="REPORT_ID", help="regenerate an issued report from its archive state and compare")
+    ap.add_argument("--register", action="store_true", help="list issued reports")
+    ap.add_argument("--supersede", metavar="OLD_ID", help="record that a report was replaced by a corrected one")
+    ap.add_argument("--by", metavar="NEW_ID")
+    ap.add_argument("--reason")
+    ap.add_argument("--render-html", help=argparse.SUPPRESS)  # used by --rebuild, inside a restored archive state
+    ap.add_argument("--manifest", help=argparse.SUPPRESS)
     args = ap.parse_args()
+    import issuance
+    if args.verify:
+        ok, lines = issuance.verify_pdf(args.verify)
+        print("\n".join(lines))
+        raise SystemExit(0 if ok else 1)
+    if args.rebuild:
+        raise SystemExit(0 if rebuild(args.rebuild) else 1)
+    if args.register:
+        problems = issuance.check_chain()
+        for e in issuance.entries():
+            print(f"{e['seq']:>4} {e['event']:<10} {e['report_id']}  " + (f"{e['status']:<11} {e['subject']}" if e["event"] == "issued"
+                                                                        else f"by {e['superseded_by']}: {e['reason']}"))
+        print("Register intact." if not problems else "REGISTER PROBLEMS:\n  " + "\n  ".join(problems))
+        return
+    if args.supersede:
+        if not (args.by and args.reason):
+            raise SystemExit("--supersede needs --by NEW_ID and --reason")
+        issuance.supersede(args.supersede, args.by, args.reason)
+        print(f"Recorded: {args.supersede} is superseded by {args.by}.")
+        return
+    if args.render_html:
+        m = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
+        D = normalised(dashboard_data())
+        page_html = render_html(D, m)
+        Path(args.render_html).write_text(page_html, encoding="utf-8")
+        print(json.dumps({"figures_sha256": issuance.figures_fingerprint(D), "html_sha256": issuance.sha256(page_html)}))
+        return
     path = make_report(args.user, args.out)
     print(f"Report saved: {path}")
 

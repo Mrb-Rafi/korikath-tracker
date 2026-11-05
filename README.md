@@ -10,6 +10,41 @@ Requires Python 3.9+ and nothing else (standard library only).
 Use the **Korikath Tracker** shortcut on the Desktop or in the Start menu (to pin it to the taskbar, right-click it in
 the Start menu → *Pin to taskbar*). It opens the dashboard in your browser. Opening it doesn't start a crawl.
 
+**Issued reports: IDs, status, checks and verification.** Every PDF the tracker makes is *issued*:
+
+- **ID and status.** It gets a report ID (e.g. `KRK-P-20261105-0815Z-352ffc6d`) and a status:
+  - **FINAL** when every check passed
+  - **PROVISIONAL** otherwise, with a watermark, the reasons on its cover and `_PROVISIONAL` in its file name
+
+  Only FINAL reports are meant for donors, evaluators or the public.
+- **Checks** (`python validate.py` runs them on their own):
+  - totals add up, the data files match their metadata, the archive is intact
+  - the code is committed
+  - there was a recent full crawl and the data is complete
+  - an issuer is named in `config.json`
+  - cross-checks: an independent PetScan count (run `python validate.py --petscan` once a month) and a live spot
+    check of 30 files
+- **Register.** The report is recorded in `published/register.jsonl` (with `published/register.csv` to publish) by
+  its PDF's SHA-256 fingerprint. The PDF itself is not stored; the archive keeps the data and code it was made from,
+  so it can be regenerated.
+- **Commands:**
+
+  ```
+  python report.py --verify FILE.pdf       was this PDF issued by the tracker? is it still current?
+  python report.py --rebuild REPORT_ID     regenerate an issued report from its recorded data and code, and compare
+  python report.py --register              list issued reports
+  python report.py --supersede OLD_ID --by NEW_ID --reason "..."   record a correction (published/ERRATA.md)
+  ```
+
+- **What the PDF contains.** It opens with:
+  - "How to rely on this report"
+  - the checks and their results
+  - a "Data used" table
+
+  Every section ends with the data it rests on, and appendices give the methods, definitions, limitations,
+  provenance, licences and credits, a glossary and how to verify. Thumbnails show their author and licence; images
+  marked as showing identifiable people are not reproduced.
+
 **PDF reports.** **Download PDF report** (top right of the Overview) saves a statistics report of the whole project:
 headline numbers, growth, kinds of media, the category tree, changes and saved crawls, views, on-wiki usage, quality /
 featured / valued files and main-page features, contributors, devices, take-to-upload gaps and collection size, with
@@ -307,6 +342,11 @@ python user_files.py "Category"          everyone who uploaded to Category, with
 | `exclude_categories` | Category titles to skip (with their whole subtree), e.g. a sister project you don't want counted |
 | `max_categories` | Safety stop if the tree suddenly grows huge (e.g. someone puts a big unrelated category inside) |
 | `user_agent` | Sent to Commons. Wikimedia asks for contact info here; add an email or your user page if you like |
+| `issuer` | Who issues the reports: `{"name": "...", "role": "...", "contact": "..."}`. Printed on every report's cover; a report without it is PROVISIONAL |
+| `report_licence` | Licence of the reports' text and figures (default `CC BY 4.0`); images keep their own licences |
+| `public_register_url` | Where `published/register.csv` is published, printed on every report so readers can check it |
+| `thumbnails` | `safe` (default: only credited images, never ones marked as showing identifiable people), `all`, or `none` |
+| `contributor_opt_out` | Uploaders who asked not to be named: counted in totals, named nowhere in reports, no report of their own |
 
 ## Files
 
@@ -315,6 +355,8 @@ python user_files.py "Category"          everyone who uploaded to Category, with
   fingerprint of each method version
 - `version.py`, `CHANGELOG.md`: tool version and build information; what changed in each version
 - `provenance.py`: the `.meta` file of every data file and the run records in `runs/`
+- `validate.py`: the checks run before every report (FINAL or PROVISIONAL); `--petscan`: the monthly independent count
+- `issuance.py`, `published/`: report IDs, the register of issued reports, their manifests, corrections
 - `migrate.py`: the one-off 2.0.0 conversion (UTC, metadata)
 - `tests/`: automated tests
 - `attribution.py`: finds who made each change (see **Who made each change**)

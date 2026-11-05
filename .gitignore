@@ -28,3 +28,9 @@ pdftest/
 
 # Local settings (contact details in the User-Agent)
 config.json
+
+# Issued-report register and validation results: data, archived and backed up by the tracker itself
+published/
+validation/
+png/
+t.pdf

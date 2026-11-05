@@ -3,6 +3,51 @@
 Every version of the tracker's code (tool version) and of what it counts (method version). Each entry says which
 figures a change affects. Versions are recorded in every data file's metadata, every run record and every report.
 
+## Tool 2.2.0 · Method M2 · 2026-11-05
+
+No change to what is counted (the method stays M2). The PDF report becomes a document readers can rely on and check:
+
+- **Every report is issued.** It has a report ID (`KRK-P-20261105-0815Z-352ffc6d`; `C` for an uploader report), a
+  status (FINAL or PROVISIONAL) and a fingerprint, and is recorded in the register of issued reports
+  (`published/register.jsonl`, hash-chained; `published/register.csv` for publishing). Its manifest
+  (`published/manifests/<ID>.json`, a few KB) records the archive state of its inputs, the fingerprints of its figures,
+  page and PDF, the checks, the image credits and the versions. **The PDF itself is not stored.**
+- **Checks before issue** (`validate.py`):
+  - errors: the snapshot is consistent, totals add up, view totals are recomputed independently, every data file
+    matches its metadata, the rules match the method version, the archive is intact
+  - freshness: the code is committed, there was a full crawl in the last 8 days and a crawl in the last 3, the
+    datasets cover at least 99% of files and are current, an issuer is named
+  - cross-checks: an independent count with PetScan (monthly, `python validate.py --petscan`), a live spot check of
+    30 random files, a recent full re-read of the assessment categories
+
+  Any failed error or freshness check makes the report PROVISIONAL: it gets a watermark, the reasons on its cover and
+  `_PROVISIONAL` in its file name.
+- **Commands:**
+  - `python report.py --verify FILE.pdf` checks whether a PDF was issued and gives its status, including SUPERSEDED.
+  - `python report.py --rebuild ID` regenerates a report from its archive state, with the code recorded in it, and
+    compares figures and page.
+  - `python report.py --supersede OLD --by NEW --reason "..."` records a correction, written to `published/ERRATA.md`.
+  - `python report.py --register` lists issued reports.
+- **New pages in the PDF:**
+  - a cover with report ID, status, fingerprint, issuer, versions and how to verify
+  - "1. How to rely on this report"
+  - "2. Checks before issue"
+  - a source line under every section (its data, as of when, how complete, definitions, API)
+  - appendices A–H: methods, definitions, limitations (with what they amount to in this report), provenance, method
+    versions and corrections, licences, credits and privacy, glossary, how to verify
+
+  The footer of every page carries the report ID and status.
+- **Images:** every thumbnail shows its author and licence from Commons. Files without them, or marked as showing
+  identifiable people (personality rights), are not reproduced. `config.json` → `thumbnails`: `safe` (default), `all`
+  or `none`.
+- **Privacy:** `config.json` → `contributor_opt_out` lists uploaders who asked not to be named. They are counted in
+  every total, named nowhere in reports, and get no uploader report.
+- **Neutral wording:** "file requests" (not "views"), "not flagged as automated" (not "by people"), "uploaders" (not
+  "contributors"). A test rejects promotional or overstated words in the report code.
+- New `config.json` keys: `issuer` (name, role, contact), `report_licence` (default CC BY 4.0),
+  `public_register_url`, `thumbnails`, `contributor_opt_out`.
+- Tests: `tests/test_reports.py`.
+
 ## Tool 2.1.0 · Method M2 · 2026-11-05
 
 **Method M2 (changes to what is counted):**
