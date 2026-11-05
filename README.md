@@ -86,8 +86,8 @@ The dashboard has three pages (the browser's Back button works between them):
   (From/To in UTC, or Last 7 days / Last 30 days / All time), named with the range and the time of download, e.g.
   `korikath_usage_changes_2026-10-01_to_2026-10-26_downloaded_2026-10-26_1432.csv`; the red Removed box links to it.
   **Download current usage** gives every current use (`usage_current.csv`). Both open in Excel with Bengali text shown correctly.
-- **Contributors**: the people who uploaded the files now in Korikath (each file's original uploader). Totals
-  (contributors, new and active in the last 30 days, the top 10's share of files, the median per person), a chart
+- **Uploaders**: the accounts that uploaded the files now in Korikath (each file's original uploader, who may not
+  be its author or photographer). Totals (uploaders, new and active in the last 30 days, the top 10's share of files, the median per person), a chart
   of contributors over time (total, active per month, new per month), how many people uploaded 1 file, 2–10, and so
   on, and a sortable, searchable table of everyone (files, share, first and latest upload, active months, files used
   on other wikis, categories). Pick a contributor (search box, or click a name) to see the member's monthly uploads chart,
@@ -95,24 +95,25 @@ The dashboard has three pages (the browser's Back button works between them):
   (`#/contributors?u=Name`). The category breakdown leaves out the catch-all categories (any category directly
   holding more than a quarter of all files: All images, Uploaded via Campaign, Unreviewed). These statistics come
   from the cached uploaders and upload dates, so they need no extra requests to Commons.
-- **Files by contributor in a category** (the "Files by contributor in a category" link): choose any category of the
-  tree (suggestions as you type) and type a contributor's user name to get the list of files that person uploaded
+- **Files by uploader in a category** (the "Files by uploader in a category" link): choose any category of the
+  tree (suggestions as you type) and type an uploader's user name to get the list of files that person uploaded
   there (each file's original uploader) and the total, with **Include subcategories** on (the default) or off (only
   files placed directly in the category). The list is sortable, has previews, and **Download list (CSV)** saves it.
   Leave the name empty to see everyone who uploaded to the category with their counts; click a name there to list
   their files. Names match without regard to case or underscores ("mrb_rafi" finds "Mrb Rafi"). Each lookup has a
   shareable link (`#/user-files?c=Category&u=Name`). It's worked out from the latest crawl and the cached uploaders,
   so it makes no requests to Commons, and it needs the dashboard opened with the shortcut.
-- **Views**: how often Korikath files are loaded (in articles, on Commons, elsewhere; thumbnails included), from
-  Wikimedia's media request statistics, which start in January 2015: all views and views by people (automated
-  traffic such as crawlers left out), monthly and daily charts, and the most viewed files, categories and
-  contributors (also a Views column on the Contributors page). A separate daily job (11:00 AM, its own lock so it
+- **File requests** (formerly "Views"): how often Korikath files are loaded (in articles, on Commons, elsewhere;
+  thumbnails included), from Wikimedia's media request statistics, which start in January 2015: all file requests
+  and those not flagged as automated (requests Wikimedia doesn't classify as bots or crawlers; a request is not
+  the same as a person looking), monthly and daily charts, and the most requested files, categories and
+  uploaders (also a File requests column on the Uploaders page). A separate daily job (11:00 AM, its own lock so it
   never blocks a crawl) first collects each file's monthly history (one time, ~24 hours for all files, saved as it
   goes), then each day brings a thirtieth of the files up to date with daily figures, so every file is updated once
   a month. **All view totals run to one common cutoff**: complete months, from January 2015 to the last month every
   file has been counted through (shown with every total, e.g. "Jan 2015 – Sep 2026"); what has been counted after it
   is partial and left out until every file has caught up. It makes one request at a time and never more than
-  180 a minute (Wikimedia allows identified tools 200). Data in `views.json.gz`. While it runs, the Views page shows
+  180 a minute (Wikimedia allows identified tools 200). Data in `views.json.gz`. While it runs, the File requests page shows
   live progress and time left (from `views_status.js`); the figures are rebuilt every 500 files and a "Refresh"
   prompt appears when newer ones are ready.
 - **Map, devices & metadata**: how many files are **geocoded** (have a camera location on their Commons page), how many have
@@ -363,7 +364,7 @@ python user_files.py "Category"          everyone who uploaded to Category, with
 - `server.py`: local server behind the dashboard's buttons
 - `archive.py`: the data archive (see **Archive**); `archive\` holds it. Never edit by hand
 - `RELIABILITY_PLAN.md`: what is planned so that every published number can be relied on and checked
-- `user_files.py`: one contributor's files in one category (the "Files by contributor" page and command line)
+- `user_files.py`: one uploader's files in one category (the "Files by uploader" page and command line)
 - `report.py`: PDF reports (project and per contributor), from the dashboard's data and the saved data files
 - `install.py`: creates the shortcut, its icon (`korikath.ico`) and the scheduled tasks
 - `dashboard_template.html`: dashboard page; data is embedded into `dashboard.html` at build time

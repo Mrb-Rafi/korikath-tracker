@@ -236,7 +236,7 @@ STATUS_ROWS = [  # (data file, dataset, label shown in the dashboard and reports
     ("assessments.json.gz", "assessments", "Quality, featured and valued images"),
     ("geo.json.gz", "geo", "Locations on Commons"),
     ("exif.json.gz", "exif", "Camera metadata and file sizes"),
-    ("views.json.gz", "views", "File requests (views)"),
+    ("views.json.gz", "views", "File requests"),
 ]
 
 

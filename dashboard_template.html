@@ -259,7 +259,7 @@
         <span class="nc-sub" id="ncUsage"></span>
       </a>
       <a class="nav-card" href="#/views">
-        <span class="nc-title">Views <span aria-hidden="true">→</span></span>
+        <span class="nc-title">File requests <span aria-hidden="true">→</span></span>
         <span class="nc-sub" id="ncViews"></span>
       </a>
       <a class="nav-card" href="#/places">
@@ -267,11 +267,11 @@
         <span class="nc-sub" id="ncPlaces"></span>
       </a>
       <a class="nav-card" href="#/contributors">
-        <span class="nc-title">Contributors <span aria-hidden="true">→</span></span>
+        <span class="nc-title">Uploaders <span aria-hidden="true">→</span></span>
         <span class="nc-sub" id="ncContrib"></span>
       </a>
       <a class="nav-card" href="#/user-files">
-        <span class="nc-title">Files by contributor in a category <span aria-hidden="true">→</span></span>
+        <span class="nc-title">Files by uploader in a category <span aria-hidden="true">→</span></span>
         <span class="nc-sub">Pick a category and a name: that person's files there, with the total</span>
       </a>
       <a class="nav-card" href="#/crawls">
@@ -370,14 +370,14 @@
 
   <!-- Views: how often Korikath files are loaded -->
   <div id="page-views" hidden>
-    <h2 class="page-title">Views</h2>
+    <h2 class="page-title">File requests</h2>
     <p class="sub" id="viewsMeta" style="margin:-6px 0 14px"></p>
     <div id="viewsLive" aria-live="polite"></div>
     <div id="viewsEmpty"></div>
     <div id="viewsBody">
       <div class="kpis" id="viewsKpis"></div>
       <section>
-        <h2>Views over time</h2>
+        <h2>File requests over time</h2>
         <div class="row">
           <div class="seg" role="radiogroup" aria-label="Chart view" id="viewsMonthSeg">
             <button type="button" data-view="monthly" aria-pressed="true">Per month</button>
@@ -389,22 +389,22 @@
         <p class="sub" style="margin:10px 0 0" id="viewsMonthNote"></p>
       </section>
       <section id="viewsDaySection">
-        <h2>Views by day</h2>
+        <h2>File requests by day</h2>
         <div class="row"><span class="growth-readout" id="viewsDayReadout" aria-live="polite"></span></div>
         <div id="viewsDayChart" class="growth"></div>
         <p class="sub" style="margin:10px 0 0" id="viewsDayNote"></p>
       </section>
       <section>
-        <h2>Most viewed files</h2>
+        <h2>Most requested files</h2>
         <div class="grid" id="viewsFiles"></div>
       </section>
       <div class="two-col">
         <section>
-          <h2>Most viewed categories</h2>
+          <h2>Most requested categories</h2>
           <div class="scroll"><table id="viewsCats"></table></div>
         </section>
         <section>
-          <h2>Most viewed contributors</h2>
+          <h2>Most requested uploaders</h2>
           <div class="scroll"><table id="viewsUsers"></table></div>
         </section>
       </div>
@@ -461,14 +461,14 @@
 
   <!-- Contributors: who uploaded the files now in the project -->
   <div id="page-contributors" hidden>
-    <h2 class="page-title">Contributors</h2>
+    <h2 class="page-title">Uploaders</h2>
     <p class="sub" id="contribMeta" style="margin:-6px 0 14px"></p>
     <div class="kpis" id="contribKpis"></div>
     <section>
-      <h2>Contributors over time</h2>
+      <h2>Uploaders over time</h2>
       <div class="row">
         <div class="seg" role="radiogroup" aria-label="Chart view" id="contribView">
-          <button type="button" data-view="total" aria-pressed="true">Total contributors</button>
+          <button type="button" data-view="total" aria-pressed="true">Total uploaders</button>
           <button type="button" data-view="active" aria-pressed="false">Active per month</button>
           <button type="button" data-view="new" aria-pressed="false">New per month</button>
         </div>
@@ -482,25 +482,25 @@
     </section>
     <section id="personSection">
       <div class="row" style="justify-content:space-between">
-        <h2 style="margin:0">Contributor</h2>
+        <h2 style="margin:0">Uploader</h2>
         <div class="row" style="margin:0">
           <label class="sub" for="personPick">Show</label>
-          <input type="search" id="personPick" list="contribNames" placeholder="Type a contributor's name…" style="min-width:240px">
+          <input type="search" id="personPick" list="contribNames" placeholder="Type an uploader's name…" style="min-width:240px">
           <datalist id="contribNames"></datalist>
         </div>
       </div>
       <div id="person"></div>
     </section>
     <section>
-      <h2>All contributors <span class="count" id="contribCount"></span></h2>
+      <h2>All uploaders <span class="count" id="contribCount"></span></h2>
       <div class="row"><input type="search" id="contribFilter" placeholder="Filter by name…" style="flex:1;min-width:200px"></div>
       <div class="scroll"><table id="contribTable"></table></div>
     </section>
   </div>
 
-  <!-- Files by contributor: one person's files in one category, worked out by the local server -->
+  <!-- Files by uploader: one person's files in one category, worked out by the local server -->
   <div id="page-userfiles" hidden>
-    <h2 class="page-title">Files by contributor in a category</h2>
+    <h2 class="page-title">Files by uploader in a category</h2>
     <p class="sub" id="ufMeta" style="margin:-6px 0 14px"></p>
     <section>
       <form id="ufForm" class="uf-form">
@@ -508,7 +508,7 @@
           <input type="search" id="ufCat" list="ufCats" placeholder="e.g. Project Korikath-Bangladesh" autocomplete="off" required>
         </label>
         <datalist id="ufCats"></datalist>
-        <label class="grow">Contributor (user name)
+        <label class="grow">Uploader (user name)
           <input type="search" id="ufUser" list="ufNames" placeholder="Leave empty to see everyone in the category" autocomplete="off">
         </label>
         <datalist id="ufNames"></datalist>
@@ -1095,14 +1095,14 @@ function renderUsage(U) {
   draw();
 }
 
-// ---- Contributors page
+// ---- Uploaders page
 const DAY_FMT = new Intl.DateTimeFormat("en-GB", {timeZone: "UTC", day: "numeric", month: "short", year: "numeric"});
 const dayOnly = (iso) => iso ? DAY_FMT.format(new Date(iso)) : "—";
 let showPerson = () => {};
 function renderContributors(C, snap) {
   if (!C) {
     $("ncContrib").textContent = "Available after upload dates are looked up.";
-    $("contribMeta").textContent = "Contributor statistics appear after the next crawl looks up each file's uploader.";
+    $("contribMeta").textContent = "Uploader statistics appear after the next crawl looks up each file's uploader.";
     return;
   }
   // users: [name, files, first upload, last upload, files used on wikis, uses, {month: files}, [[category, files]], categories]
@@ -1118,15 +1118,15 @@ function renderContributors(C, snap) {
   const active = U.filter(u => Date.parse(u[3]) >= cutoff).length;
 
   $("ncContrib").textContent = `${fmt(U.length)} people uploaded Korikath's files · the top 10 uploaded ${pct(top10, total)}`;
-  $("contribMeta").innerHTML = `People who uploaded the ${fmt(total)} files now in Korikath (the original uploader of each file), as of the last crawl, ${when(snap.taken_at)}. Months are in UTC.`;
+  $("contribMeta").innerHTML = `Accounts that first uploaded the ${fmt(total)} files now in Korikath (the original uploader of each file, who may not be its author or photographer), as of the last crawl, ${when(snap.taken_at)}. Months are in UTC.`;
   $("contribKpis").innerHTML =
-    kpi("Contributors", fmt(U.length)) +
+    kpi("Uploaders", fmt(U.length)) +
     kpi("New in the last 30 days", fmt(fresh), null, false, "first upload in that time") +
     kpi("Active in the last 30 days", fmt(active), null, false, "uploaded at least one file") +
     kpi("Top 10 uploaded", pct(top10, total), null, false, "of all files") +
-    kpi("Median per contributor", fmt(median), null, false, median === 1 ? "file" : "files");
+    kpi("Median per uploader", fmt(median), null, false, median === 1 ? "file" : "files");
 
-  // Contributors over time
+  // Uploaders over time
   const firstMonth = (u) => Object.keys(u[6]).sort()[0];  // months are "YYYY-MM" in UTC, from the tracker
   const allMonths = [...new Set(U.flatMap(u => Object.keys(u[6])))].sort();
   const months = [];
@@ -1148,9 +1148,9 @@ function renderContributors(C, snap) {
     new: months.map(m => ({date: toDate(m), v: newBy[m] || 0})),
   };
   const say = {
-    total: (d, f) => `<b>${fmt(d.v)}</b> contributors by the end of ${f(d.date)}`,
+    total: (d, f) => `<b>${fmt(d.v)}</b> uploaders by the end of ${f(d.date)}`,
     active: (d, f) => `<b>${fmt(d.v)}</b> ${d.v === 1 ? "person" : "people"} uploaded in ${f(d.date)}`,
-    new: (d, f) => `<b>${fmt(d.v)}</b> new ${d.v === 1 ? "contributor" : "contributors"} in ${f(d.date)}`,
+    new: (d, f) => `<b>${fmt(d.v)}</b> new ${d.v === 1 ? "uploader" : "uploaders"} in ${f(d.date)}`,
   };
   let view = "total", drawChart;
   const chart = () => {
@@ -1173,13 +1173,13 @@ function renderContributors(C, snap) {
   sortState.contribBuckets = sortState.contribBuckets || {col: 0, dir: 1};  // smallest group first
   sortTable("contribBuckets", [
     {label: "Uploaded", key: r => r[3], cell: r => r[0]},
-    {label: "Contributors", cls: "num", key: r => r[1], cell: r => fmt(r[1])},
-    {label: "Share of contributors", cls: "barcell", key: r => r[1], cell: r => `<span class="pct">${pct(r[1], U.length)}</span>${bar(r[1], U.length)}`},
+    {label: "Uploaders", cls: "num", key: r => r[1], cell: r => fmt(r[1])},
+    {label: "Share of uploaders", cls: "barcell", key: r => r[1], cell: r => `<span class="pct">${pct(r[1], U.length)}</span>${bar(r[1], U.length)}`},
     {label: "Files", cls: "num", key: r => r[2], cell: r => fmt(r[2])},
     {label: "Share of files", cls: "barcell", key: r => r[2], cell: r => `<span class="pct">${pct(r[2], total)}</span>${bar(r[2], total)}`},
   ], groupRows, 10, 0);
 
-  // One contributor
+  // One uploader
   const byName = new Map(U.map(u => [u[0], u]));
   // Per-person counts only list kinds the person has; anything missing is 0.
   const qfv = (name) => {
@@ -1245,10 +1245,10 @@ function renderContributors(C, snap) {
     if (byName.has(v)) location.hash = "#/contributors?u=" + encodeURIComponent(v);
   };
 
-  // All contributors
+  // All uploaders
   const nameBtn = (n) => `<button type="button" class="linkbtn" data-person="${esc(n)}">${esc(n)}</button>`;
   const leaderCols = [
-    {label: "Contributor", text: true, key: r => r[0].toLowerCase(), cell: r => nameBtn(r[0])},
+    {label: "Uploader", text: true, key: r => r[0].toLowerCase(), cell: r => nameBtn(r[0])},
     {label: "Files", cls: "num", key: r => r[1], cell: r => fmt(r[1])},
     {label: "Share of files", cls: "barcell", key: r => r[1], cell: r => `<span class="pct">${pct(r[1], total)}</span>${bar(r[1], U[0][1])}`},
     {label: "First upload", key: r => Date.parse(r[2]), cell: r => dayOnly(r[2])},
@@ -1268,7 +1268,7 @@ function renderContributors(C, snap) {
        cell: r => DATA.places.gap.by_user[r[0]] ? fmt(Math.round(DATA.places.gap.by_user[r[0]][0])) : "—"},
     ] : []),
     ...(DATA.views ? [
-      {label: "Views", cls: "num", key: r => (DATA.views.by_user[r[0]] || [0])[0], cell: r => fmt((DATA.views.by_user[r[0]] || [0])[0])},
+      {label: "File requests", cls: "num", key: r => (DATA.views.by_user[r[0]] || [0])[0], cell: r => fmt((DATA.views.by_user[r[0]] || [0])[0])},
     ] : []),
     {label: "Categories", cls: "num", key: r => r[8], cell: r => fmt(r[8])},
   ];
@@ -1364,7 +1364,7 @@ function renderViews(V) {
   if (!V) {
     $("ncViews").textContent = "View counts are being collected.";
     $("viewsBody").hidden = true;
-    $("viewsEmpty").innerHTML = `<div class="notice">View counts haven't been collected yet. The daily views job collects them.</div>`;
+    $("viewsEmpty").innerHTML = `<div class="notice">File-request counts haven't been collected yet. The daily file-request job collects them.</div>`;
     return;
   }
   const partial = V.with_history < V.files;
@@ -1373,19 +1373,19 @@ function renderViews(V) {
   // Complete months: counted to the month's end for every file that has a history.
   const complete = V.months.filter(r => r[3] >= V.with_history);
   const lastMonth = complete[complete.length - 1];
-  $("ncViews").textContent = `${bigNum(V.all)} views${partial ? " so far" : ""} · ${pct1(V.human, V.all)} by people · ${period}`;
+  $("ncViews").textContent = `${bigNum(V.all)} file requests${partial ? " so far" : ""} · ${pct1(V.human, V.all)} not flagged as automated · ${period}`;
   $("viewsMeta").innerHTML = `How often Korikath files are loaded anywhere: in articles, on Commons, on other sites or opened directly,
-    thumbnails included, from Wikimedia's media request statistics (which start in January 2015). <b>Views by people</b> leaves out
-    automated traffic such as search-engine crawlers.` +
+    thumbnails included, from Wikimedia's media request statistics (which start in January 2015). <b>Not flagged as automated</b> is the part Wikimedia doesn't
+    classify as coming from bots or crawlers (some automated traffic can remain); a request is not the same as a person looking.` +
     (partial ? ` <b>The history is still being collected: ${fmt(V.with_history)} of ${fmt(V.files)} files so far${V.running ? " (in progress)" : ""}.</b>` : "") +
     ` Each day a thirtieth of the files is brought up to date, so every file is updated once a month.` +
     ` <b>All totals here cover ${period}</b>, complete months that every file has been counted through` +
-    (V.after_cutoff && V.after_cutoff[0] ? `; the ${fmt(V.after_cutoff[0])} views counted since then are partial and not included until every file has been counted through that month.` : ".");
+    (V.after_cutoff && V.after_cutoff[0] ? `; the ${fmt(V.after_cutoff[0])} file requests counted since then are partial and not included until every file has been counted through that month.` : ".");
   $("viewsKpis").innerHTML =
-    kpi(partial ? "Views so far" : "All-time views", bigNum(V.all), null, false, `${fmt(V.all)} · ${period}`) +
-    kpi("Views by people", bigNum(V.human), null, false, `${pct1(V.human, V.all)} of all views`) +
-    kpi("Automated views", bigNum(V.all - V.human), null, false, pct1(V.all - V.human, V.all)) +
-    (lastMonth ? kpi(`In ${monthName(lastMonth[0])}`, bigNum(lastMonth[1]), null, false, `${bigNum(lastMonth[2])} by people`) : "") +
+    kpi(partial ? "File requests so far" : "File requests", bigNum(V.all), null, false, `${fmt(V.all)} · ${period}`) +
+    kpi("Not flagged as automated", bigNum(V.human), null, false, `${pct1(V.human, V.all)} of all requests`) +
+    kpi("Flagged as automated", bigNum(V.all - V.human), null, false, pct1(V.all - V.human, V.all)) +
+    (lastMonth ? kpi(`In ${monthName(lastMonth[0])}`, bigNum(lastMonth[1]), null, false, `${bigNum(lastMonth[2])} not flagged as automated`) : "") +
     kpi("Files counted", fmt(V.with_history), null, false, `of ${fmt(V.files)}`);
 
   // Monthly chart: views per month (bars), or the all-time running total (a line). Hover for people
@@ -1401,11 +1401,11 @@ function renderViews(V) {
     $("viewsMonthSeg").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === monthView));
     const draw = monthView === "total"
       ? monthChart($("viewsMonthChart"), $("viewsMonthReadout"), totalPts, "step",
-          (d, f) => `<b>${fmt(d.v)}</b> views by the end of ${f(d.date)} · ${fmt(d.h)} by people`,
-          () => `<b>${fmt(runAll)}</b> views since ${monthPts.length ? monthName(V.months[0][0]) : "—"} · ${fmt(runHuman)} by people`, axis)
+          (d, f) => `<b>${fmt(d.v)}</b> file requests by the end of ${f(d.date)} · ${fmt(d.h)} not flagged as automated`,
+          () => `<b>${fmt(runAll)}</b> file requests since ${monthPts.length ? monthName(V.months[0][0]) : "—"} · ${fmt(runHuman)} not flagged as automated`, axis)
       : monthChart($("viewsMonthChart"), $("viewsMonthReadout"), monthPts, "bars",
-          (d, f) => `<b>${fmt(d.v)}</b> views in ${f(d.date)} · ${fmt(d.h)} by people` + partialNote(d),
-          () => lastMonth ? `<b>${fmt(lastMonth[1])}</b> views in ${monthName(lastMonth[0])}, the last complete month` : "Hover a month for its views", axis);
+          (d, f) => `<b>${fmt(d.v)}</b> file requests in ${f(d.date)} · ${fmt(d.h)} not flagged as automated` + partialNote(d),
+          () => lastMonth ? `<b>${fmt(lastMonth[1])}</b> file requests in ${monthName(lastMonth[0])}, the last complete month` : "Hover a month for its file requests", axis);
     draw();
   };
   $("viewsMonthSeg").querySelectorAll("button").forEach(b => b.onclick = () => {
@@ -1413,7 +1413,7 @@ function renderViews(V) {
     try { localStorage.setItem("viewsMonthView", monthView); } catch (e) {}
     drawMonths();
   });
-  $("viewsMonthNote").textContent = `The chart covers every month with views of the files counted so far, back to January 2015 when the
+  $("viewsMonthNote").textContent = `The chart covers every month with file requests for the files counted so far, back to January 2015 when the
     statistics begin. The latest months fill in over the 30-day update cycle; until then they show only the files counted so far.`;
 
   // Daily chart, from the daily update cycle.
@@ -1422,33 +1422,33 @@ function renderViews(V) {
   if (days.length) {
     const dayPts = days.map(([d, a, h, n]) => ({date: new Date(d + "T00:00:00"), v: a, h, n}));
     drawDays = monthChart($("viewsDayChart"), $("viewsDayReadout"), dayPts, "bars",
-      (d) => `<b>${fmt(d.v)}</b> views on ${d.date.toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"})} · ${fmt(d.h)} by people · ${pct1(d.n, V.files)} of files counted`,
-      () => "Hover a day for its views", (v) => v >= 1e6 ? (v / 1e6) + "M" : v >= 1e3 ? (v / 1e3) + "k" : v, d3.timeDay);
+      (d) => `<b>${fmt(d.v)}</b> file requests on ${d.date.toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"})} · ${fmt(d.h)} not flagged as automated · ${pct1(d.n, V.files)} of files counted`,
+      () => "Hover a day for its file requests", (v) => v >= 1e6 ? (v / 1e6) + "M" : v >= 1e3 ? (v / 1e3) + "k" : v, d3.timeDay);
     $("viewsDayNote").textContent = `Per-day figures start with the daily update cycle. A day is complete once every file has been
       brought up to date past it (up to 30 days later); the percentage on hover shows how far along it is.`;
   } else {
     $("viewsDaySection").hidden = true;
   }
 
-  // Most viewed files
+  // Most requested files
   $("viewsFiles").innerHTML = V.top_files.slice(0, 24).map(([t, a, h, u]) => `<div class="card">
     <a href="${pageUrl(t)}" target="_blank" rel="noopener">${thumb(t)}</a>
     <div class="body"><div class="name">${link(t, short(t))}</div>
-      <div class="kv"><b>${fmt(a)}</b> views · ${fmt(h)} by people${u ? ` · by ${link("User:" + u, u)}` : ""}</div></div></div>`).join("");
+      <div class="kv"><b>${fmt(a)}</b> file requests · ${fmt(h)} not flagged as automated${u ? ` · by ${link("User:" + u, u)}` : ""}</div></div></div>`).join("");
 
   const bar = (a, b) => `<div class="bar"><span style="width:${b ? Math.max(100 * a / b, 0.5) : 0}%"></span></div>`;
   sortTable("viewsCats", [
     {label: "Category", text: true, key: r => short(r[0]), cell: r => link(r[0], short(r[0]))},
-    {label: "Views", cls: "num", key: r => r[1], cell: r => fmt(r[1])},
-    {label: "By people", cls: "num", key: r => r[2], cell: r => fmt(r[2])},
+    {label: "File requests", cls: "num", key: r => r[1], cell: r => fmt(r[1])},
+    {label: "Not flagged as automated", cls: "num", key: r => r[2], cell: r => fmt(r[2])},
     {label: "Share", cls: "barcell", key: r => r[1], cell: r => `<span class="pct">${pct1(r[1], V.all)}</span>${bar(r[1], V.all)}`},
     {label: "Files", cls: "num", key: r => r[3], cell: r => fmt(r[3])},
   ], V.categories, 15);
   const files = new Map((DATA.contributors ? DATA.contributors.users : []).map(u => [u[0], u[1]]));
   sortTable("viewsUsers", [
-    {label: "Contributor", text: true, key: r => r[0], cell: r => `<a href="#/contributors?u=${encodeURIComponent(r[0])}">${esc(r[0])}</a>`},
-    {label: "Views", cls: "num", key: r => r[1][0], cell: r => fmt(r[1][0])},
-    {label: "By people", cls: "num", key: r => r[1][1], cell: r => fmt(r[1][1])},
+    {label: "Uploader", text: true, key: r => r[0], cell: r => `<a href="#/contributors?u=${encodeURIComponent(r[0])}">${esc(r[0])}</a>`},
+    {label: "File requests", cls: "num", key: r => r[1][0], cell: r => fmt(r[1][0])},
+    {label: "Not flagged as automated", cls: "num", key: r => r[1][1], cell: r => fmt(r[1][1])},
     {label: "Per file", cls: "num", key: r => files.get(r[0]) ? r[1][0] / files.get(r[0]) : 0,
      cell: r => files.get(r[0]) ? fmt(Math.round(r[1][0] / files.get(r[0]))) : "—"},
   ], Object.entries(V.by_user), 15);
@@ -1510,14 +1510,14 @@ function renderPlaces(P) {
     {label: "Share", cls: "barcell", key: r => r[1].files, cell: r => `<span class="pct">${pct(r[1].files, withInfo)}</span>${bar(r[1].files, withInfo)}`},
     {label: "Models", cls: "num", key: r => r[1].models, cell: r => fmt(r[1].models)},
   ], group(1), 10);
-  // models: [device, brand, type, files, contributors]
+  // models: [device, brand, type, files, uploaders]
   const modelCols = [
     {label: "Device", text: true, key: r => r[0], cell: r => esc(r[0])},
     {label: "Brand", text: true, key: r => r[1], cell: r => esc(r[1])},
     {label: "Type", text: true, key: r => r[2], cell: r => kindName[r[2]] || esc(r[2])},
     {label: "Files", cls: "num", key: r => r[3], cell: r => fmt(r[3])},
     {label: "Share", cls: "barcell", key: r => r[3], cell: r => `<span class="pct">${pct(r[3], withInfo)}</span>${bar(r[3], P.models[0] ? P.models[0][3] : 1)}`},
-    {label: "Contributors", cls: "num", key: r => r[4], cell: r => fmt(r[4])},
+    {label: "Uploaders", cls: "num", key: r => r[4], cell: r => fmt(r[4])},
   ];
   const drawModels = () => {
     const q = $("devFilter").value.trim().toLowerCase();
@@ -1713,8 +1713,8 @@ function renderHome(snap, rep) {
   const V = DATA.views;
   if (V) {
     const partial = V.with_history < V.files;
-    cards += kpi(partial ? "Views so far" : "All-time views", bigNum(V.all), null, false,
-      `${bigNum(V.human)} by people (${pct1(V.human, V.all)}) · ${viewsPeriod(V)}` + (partial ? ` · ${fmt(V.with_history)} of ${fmt(V.files)} files counted` : ""));
+    cards += kpi(partial ? "File requests so far" : "File requests", bigNum(V.all), null, false,
+      `${bigNum(V.human)} not flagged as automated (${pct1(V.human, V.all)}) · ${viewsPeriod(V)}` + (partial ? ` · ${fmt(V.with_history)} of ${fmt(V.files)} files counted` : ""));
   }
   const Zs = DATA.places && DATA.places.size;
   if (Zs) cards += kpi("Collection size", bytes(Zs.total), null, false, `average ${bytes(Zs.total / Zs.files)} per file`);
@@ -1739,7 +1739,7 @@ function renderHome(snap, rep) {
   if (C) {
     const cutoff = Date.parse(snap.taken_at) - 30 * 864e5;
     const fresh = C.users.filter(u => Date.parse(u[2]) >= cutoff).length;
-    cards += kpi("Contributors", fmt(C.users.length), null, false, `${fmt(fresh)} new in the last 30 days`);
+    cards += kpi("Uploaders", fmt(C.users.length), null, false, `${fmt(fresh)} new in the last 30 days`);
   }
   $("kpis").innerHTML = cards;
   renderAlerts(snap, latest);
@@ -2534,7 +2534,7 @@ async function loadSchedule() {
   }
 }
 // ---- PDF reports, made by the local server (report.py). Any button with data-report: "" is the
-// whole project, a name is that contributor.
+// whole project, a name is that uploader.
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("[data-report]");
   if (!b) return;
@@ -2678,7 +2678,7 @@ function renderViewsLive() {
   let html = "";
   const fresh = S && Date.now() - Date.parse(S.updated_at) < 5 * 60 * 1000;
   const newer = S && S.built && DATA && S.built !== DATA.generated_at && Date.parse(S.built) > Date.parse(DATA.generated_at);
-  const refresh = newer ? `<div class="small" style="margin-top:6px"><b>Newer view counts are ready.</b>
+  const refresh = newer ? `<div class="small" style="margin-top:6px"><b>Newer file-request counts are ready.</b>
     <button type="button" class="btn" onclick="location.reload()">Refresh</button></div>` : "";
   if (S && S.running && fresh && S.total) {
     const pct = Math.min(S.done / S.total, 1);
@@ -2686,7 +2686,7 @@ function renderViewsLive() {
     const left = S.done > 20 ? secs / S.done * (S.total - S.done) : null;
     const leftText = left == null ? "estimating time left…" : left < 3600 ? `about ${Math.max(1, Math.round(left / 60))} min left`
       : `about ${(left / 3600).toFixed(left < 36000 ? 1 : 0)} hours left while the PC is on`;
-    const what = S.history ? "Collecting view history" : "Updating today's view counts";
+    const what = S.history ? "Collecting file-request history" : "Updating today's file-request counts";
     html = `<div class="status running"><span class="pulse"></span><div><b>${what}: ${fmt(S.done)} of ${fmt(S.total)} files</b>
       <div class="progress" role="progressbar" aria-valuenow="${Math.round(pct * 100)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${(pct * 100).toFixed(1)}%"></span></div>
       <div class="small"><b class="eta">${Math.round(pct * 100)}% · ${leftText}</b></div>
@@ -2708,14 +2708,14 @@ function pollStatus() {
   document.head.appendChild(sc);
 }
 
-// ---- Files by contributor in a category (#/user-files?c=Category&u=Name[&sub=0]). The server works it out
+// ---- Files by uploader in a category (#/user-files?c=Category&u=Name[&sub=0]). The server works it out
 // from the latest crawl and the cached uploaders (user_files.py), so it needs the dashboard opened with the shortcut.
 let ufLast = null;
 function setupUserFiles() {
   const cats = DATA && DATA.snapshot ? Object.values(DATA.snapshot.categories).sort((a, b) => b.total - a.total) : [];
   $("ufCats").innerHTML = cats.map(c => `<option value="${esc(short(c.title))}">${fmt(c.total)} files</option>`).join("");
   $("ufNames").innerHTML = ((DATA && DATA.contributors && DATA.contributors.users) || []).map(u => `<option value="${esc(u[0])}">`).join("");
-  $("ufMeta").innerHTML = `Choose a category of the Korikath tree and type a contributor's user name to list the files they uploaded there
+  $("ufMeta").innerHTML = `Choose a category of the Korikath tree and type an uploader's user name to list the files they uploaded there
     (each file's original uploader), with the total. Leave the name empty to see everyone who uploaded to the category.
     ${DATA && DATA.snapshot ? `From the latest crawl, ${esc(when(DATA.snapshot.taken_at))}.` : ""}`;
   $("ufForm").onsubmit = (e) => {
@@ -2817,7 +2817,7 @@ async function showUserFiles(q, force) {
   delete sortState.ufUploaders;
   delete expanded.ufUploaders;
   sortTable("ufUploaders", [
-    {label: "Contributor", text: true, key: u => u[0].toLowerCase(),
+    {label: "Uploader", text: true, key: u => u[0].toLowerCase(),
      cell: u => `<button type="button" class="linkbtn" data-uf-user="${esc(u[0])}">${esc(u[0])}</button>`},
     {label: "Files", cls: "num", key: u => u[1], cell: u => fmt(u[1])},
     {label: "Share of the category", cls: "num", key: u => u[1], cell: u => pct(u[1], r.category_files)},
@@ -2827,9 +2827,9 @@ setupUserFiles();
 
 // ---- Pages: #/ overview, #/crawls, #/changes. They're views of this one page, so Back works.
 const PAGE_TITLES = {home: "Korikath Tracker", crawls: "Crawls · Korikath Tracker", changes: "Changes · Korikath Tracker",
-  usage: "On-wiki usage · Korikath Tracker", contributors: "Contributors · Korikath Tracker",
-  places: "Map, devices & metadata · Korikath Tracker", views: "Views · Korikath Tracker",
-  userfiles: "Files by contributor · Korikath Tracker"};
+  usage: "On-wiki usage · Korikath Tracker", contributors: "Uploaders · Korikath Tracker",
+  places: "Map, devices & metadata · Korikath Tracker", views: "File requests · Korikath Tracker",
+  userfiles: "Files by uploader · Korikath Tracker"};
 function route() {
   const [path, query] = location.hash.replace(/^#\/?/, "").split("?");
   const name = {"crawls": "crawls", "changes": "changes", "usage": "usage", "contributors": "contributors", "places": "places", "views": "views",

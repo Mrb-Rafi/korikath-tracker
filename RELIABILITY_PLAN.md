@@ -639,8 +639,8 @@ affiliation and privacy colophon. An opted-out test user never appears by name.
 
 ### WP11: Neutral language and terminology (F11)
 
-> **Status 2026-11-05: implemented for the PDF.** The terminology and the banned-words test (`tests/test_reports.py`)
-> are in place, and every sentence comes from code templates. The dashboard still says "views" and "contributors".
+> **Status 2026-11-05: implemented** for the PDF (tool 2.2.0) and the dashboard (tool 2.2.1), with tests for both.
+> Page addresses (`#/views`, `#/contributors`) were kept so saved links work.
 
 1. Write `docs/STYLE.md` with the rules below. Add a test that searches `report.py` and the template for the
    banned words.

@@ -3,6 +3,18 @@
 Every version of the tracker's code (tool version) and of what it counts (method version). Each entry says which
 figures a change affects. Versions are recorded in every data file's metadata, every run record and every report.
 
+## Tool 2.2.1 · Method M2 · 2026-11-05
+
+- **The dashboard uses the same wording as the PDF reports:**
+  - "File requests" for views, and "Not flagged as automated" for by people
+  - "Uploaders" for contributors
+  - "Most requested" for most viewed
+  - "Files by uploader" for files by contributor
+
+  Only the visible text changed: page addresses (`#/views`, `#/contributors?u=Name`) stay, so saved links keep
+  working. "OpenStreetMap contributors" stays, as that is OpenStreetMap's required credit.
+- A test keeps the old wording out of the dashboard.
+
 ## Tool 2.2.0 · Method M2 · 2026-11-05
 
 No change to what is counted (the method stays M2). The PDF report becomes a document readers can rely on and check:

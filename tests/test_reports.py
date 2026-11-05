@@ -102,7 +102,16 @@ class WordingTests(unittest.TestCase):
     def test_neutral_labels(self):
         text = (BASE / "report.py").read_text(encoding="utf-8")
         for old in ('"Views"', "by people", "By people", '"Contributors"', "All-time views", "Most viewed"):
-            self.assertNotIn(old, text, old)
+            self.assertFalse(old in text, f"report still says {old!r}")
+
+    def test_dashboard_uses_the_same_wording(self):
+        text = (BASE / "dashboard_template.html").read_text(encoding="utf-8")
+        for old in ("by people", "By people", "All-time views", "Views so far", "Most viewed", 'label: "Views"',
+                    '"Contributors"', '"Contributor"', 'label: "Contributor', ">Views<", ">Contributors<", "Views · Korikath",
+                    "Contributors · Korikath", "Files by contributor"):
+            self.assertFalse(old in text, f"dashboard still says {old!r}")
+        # OpenStreetMap's credit line is the one place "contributors" must stay.
+        self.assertIn("OpenStreetMap contributors", text)
 
 
 class CreditTests(unittest.TestCase):
