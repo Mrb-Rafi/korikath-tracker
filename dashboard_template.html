@@ -354,6 +354,13 @@
         </div>
       </div>
     </section>
+    <section id="dataStatusSection">
+      <h2>Data status</h2>
+      <p class="sub" style="margin:-6px 0 10px">How current and how complete each kind of data is, compared with the latest
+        crawl. A figure built on data that doesn't cover every file says so where it is shown. All times UTC.</p>
+      <div class="scroll"><table id="dataStatus"></table></div>
+      <p class="sub" id="buildInfo" style="margin-top:8px"></p>
+    </section>
     <section>
       <h2>Saved crawls <span class="count" id="savedCount"></span></h2>
       <svg class="spark" id="spark" preserveAspectRatio="none"></svg>
@@ -621,6 +628,9 @@ const when = (iso) => iso ? whenShort(iso) + " UTC" : "—";
 
 // Who made a change (found by attribution.py): {user, timestamp, how, url, wiki}. A usage-log row carries it in
 // columns 9-12: changed_by, changed_at_utc, how, edit_link.
+// The period view totals cover: complete months from January 2015 to the common cutoff (tracker.views_cutoff).
+const monthShort = (m) => m ? new Date(Date.UTC(+m.slice(0, 4), +m.slice(5) - 1, 1)).toLocaleDateString("en-GB", {month: "short", year: "numeric", timeZone: "UTC"}) : "";
+const viewsPeriod = (V) => V.cutoff_month ? `${monthShort(V.totals_from || "2015-01")} – ${monthShort(V.cutoff_month)}` : "no complete month yet";
 const rowEdit = (r) => r && r[11] ? {user: r[9], timestamp: r[10], how: r[11], url: r[12]} : null;
 function editHost(e) {
   if (e.wiki) return e.wiki;
@@ -690,6 +700,7 @@ function render() {
   sel.onchange = () => renderReport(reports[+sel.value], snap);
   renderReport(reports[reports.length - 1], snap);
   renderHistory(hist);
+  renderDataStatus();
   setupTabs(snap);
 }
 
@@ -1358,17 +1369,20 @@ function renderViews(V) {
   }
   const partial = V.with_history < V.files;
   const monthName = (m) => new Date(+m.slice(0, 4), +m.slice(5) - 1, 1).toLocaleDateString("en-GB", {month: "long", year: "numeric"});
+  const period = viewsPeriod(V);
   // Complete months: counted to the month's end for every file that has a history.
   const complete = V.months.filter(r => r[3] >= V.with_history);
   const lastMonth = complete[complete.length - 1];
-  $("ncViews").textContent = `${bigNum(V.all)} views${partial ? " so far" : ""} · ${pct1(V.human, V.all)} by people`;
+  $("ncViews").textContent = `${bigNum(V.all)} views${partial ? " so far" : ""} · ${pct1(V.human, V.all)} by people · ${period}`;
   $("viewsMeta").innerHTML = `How often Korikath files are loaded anywhere: in articles, on Commons, on other sites or opened directly,
     thumbnails included, from Wikimedia's media request statistics (which start in January 2015). <b>Views by people</b> leaves out
     automated traffic such as search-engine crawlers.` +
     (partial ? ` <b>The history is still being collected: ${fmt(V.with_history)} of ${fmt(V.files)} files so far${V.running ? " (in progress)" : ""}.</b>` : "") +
-    ` Each day a thirtieth of the files is brought up to date, so every file is updated once a month.`;
+    ` Each day a thirtieth of the files is brought up to date, so every file is updated once a month.` +
+    ` <b>All totals here cover ${period}</b>, complete months that every file has been counted through` +
+    (V.after_cutoff && V.after_cutoff[0] ? `; the ${fmt(V.after_cutoff[0])} views counted since then are partial and not included until every file has been counted through that month.` : ".");
   $("viewsKpis").innerHTML =
-    kpi(partial ? "Views so far" : "All-time views", bigNum(V.all), null, false, fmt(V.all) + " in all") +
+    kpi(partial ? "Views so far" : "All-time views", bigNum(V.all), null, false, `${fmt(V.all)} · ${period}`) +
     kpi("Views by people", bigNum(V.human), null, false, `${pct1(V.human, V.all)} of all views`) +
     kpi("Automated views", bigNum(V.all - V.human), null, false, pct1(V.all - V.human, V.all)) +
     (lastMonth ? kpi(`In ${monthName(lastMonth[0])}`, bigNum(lastMonth[1]), null, false, `${bigNum(lastMonth[2])} by people`) : "") +
@@ -1700,7 +1714,7 @@ function renderHome(snap, rep) {
   if (V) {
     const partial = V.with_history < V.files;
     cards += kpi(partial ? "Views so far" : "All-time views", bigNum(V.all), null, false,
-      `${bigNum(V.human)} by people (${pct1(V.human, V.all)})` + (partial ? ` · ${fmt(V.with_history)} of ${fmt(V.files)} files counted` : ""));
+      `${bigNum(V.human)} by people (${pct1(V.human, V.all)}) · ${viewsPeriod(V)}` + (partial ? ` · ${fmt(V.with_history)} of ${fmt(V.files)} files counted` : ""));
   }
   const Zs = DATA.places && DATA.places.size;
   if (Zs) cards += kpi("Collection size", bytes(Zs.total), null, false, `average ${bytes(Zs.total / Zs.files)} per file`);
@@ -2101,6 +2115,27 @@ document.addEventListener("toggle", (e) => {
   const d = e.target, id = d.dataset && d.dataset.more;
   if (d.open && id && MORE[id]) { d.querySelector(".grid").innerHTML = MORE[id](); delete MORE[id]; }
 }, true);
+
+function renderDataStatus() {
+  const rows = DATA.data_status, b = DATA.build;
+  if (!rows) { $("dataStatusSection").hidden = true; return; }
+  $("dataStatus").innerHTML = `<tr><th>Data</th><th>As of</th><th class="num">Files covered</th><th class="num">Share</th><th>Notes</th></tr>` +
+    rows.map(r => {
+      const full = r.share == null || r.share >= 1;
+      return `<tr><td>${esc(r.label)}</td><td>${r.as_of ? (String(r.as_of).length === 10 ? esc(r.as_of) : when(r.as_of)) : "—"}</td>
+        <td class="num">${r.covered == null ? "—" : fmt(r.covered)}${r.of != null ? ` of ${fmt(r.of)}` : ""}</td>
+        <td class="num">${r.share == null ? "—" : `<span class="${full ? "" : "cause bad"}">${pct1(r.covered, r.of)}</span>`}</td>
+        <td class="sub">${esc(r.note || "")}</td></tr>`;
+    }).join("");
+  $("buildInfo").textContent = b ? `Built by Korikath Tracker ${b.tool_version}, method ${b.method_version}` +
+    (b.git_commit ? `, code commit ${b.git_commit}${b.code_modified ? " (with uncommitted changes)" : ""}` : ", code not under version control") +
+    `, on ${when(DATA.generated_at)}.` : "";
+}
+// The coverage of one dataset (DATA.data_status), for notes next to figures built on it: "" when complete.
+function coverageNote(dataset) {
+  const r = (DATA.data_status || []).find(x => x.dataset === dataset);
+  return r && r.share != null && r.share < 1 ? ` · based on ${fmt(r.covered)} of ${fmt(r.of)} files` : "";
+}
 
 function renderHistory(hist) {
   const dur = (sec) => sec ? `${Math.floor(sec / 60)} min ${sec % 60} s` : "—";

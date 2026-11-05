@@ -13,6 +13,7 @@ folder and the PDF `../Project_Korikath_Comprehensive_Statistics_Report.pdf`.
 | 2026-11-04 | First version. |
 | 2026-11-04 | **Decision: UTC everywhere.** All times the tool stores *or shows* (dashboard, CSV files, PDF reports, file names, logs) are in UTC, written with an explicit "UTC" or ISO 8601 `Z`. No local time zone is shown. This replaces the earlier proposal of "Bangladesh time (UTC+06:00)". See WP8.5. Not implemented yet. |
 | 2026-11-04 | **WP5 (archiving) implemented** in `archive.py`. The first state was recorded at 2026-11-04 07:47:57 UTC. See WP5 for what is done and what remains. |
+| 2026-11-05 | **Phase 2 implemented (tool 2.1.0, method M2).** See the status notes under WP8, WP9, WP14 and WP15. **Decision on storage:** issued PDFs are not stored; the archive and (Phase 4) the public register keep only each PDF's SHA-256, plus a fingerprint of its figures and the archived data and code it was built from, which are enough to verify a PDF and to regenerate it. WP6's bundle will reference archived data by hash instead of copying it, and keep figures.json (small) rather than the PDF. |
 | 2026-11-05 | **Phase 1 implemented (tool 2.0.0, method M1).** WP8.5 UTC everywhere; WP1 versioning (`version.py`, `CHANGELOG.md`, git repository); WP4 methodology register (`methodology.py`, with D01–D18 and L01–L17); WP2 data-file metadata; WP3 run records (`provenance.py`, `runs/`); first tests (`tests/`). Two deliberate changes from the plan's wording, both below: metadata are sidecar files (`<file>.meta`), not an envelope inside each data file, and run records rely on the archive's hash-chained register instead of a second register. |
 
 **How to use it.** Work through Part 4 (work packages) in the order given in Part 8. Each work package has
@@ -472,9 +473,18 @@ history is at 38% coverage comes out PROVISIONAL with the reason printed.
 
 ### WP8: A single reference date and consistent time handling (F2, F10)
 
-> **Status 2026-11-05: point 5 (UTC everywhere) implemented** (method M1): code, dashboard, CSV files, PDF and file
-> names; old usage-log rows converted. A test checks that no local time zone remains in the code. Points 1–4 are
-> Phase 2.
+> **Status 2026-11-05:**
+> - **Point 5 (UTC everywhere): implemented** (method M1). This covers the code, dashboard, CSV files, PDF and file
+>   names; old usage-log rows were converted. A test checks that no local time zone remains in the code.
+> - **Point 2: implemented** (tool 2.1.0). Crawls record `crawl_started_at` and `crawl_finished_at`, and the
+>   "Data used" table shows them.
+> - **Point 3: implemented** (method M2). See `tracker.views_cutoff`. Totals run January 2015 to the common cutoff,
+>   which is stated with every total. Requests after the cutoff are shown apart. A test recomputes the totals
+>   independently.
+> - **Point 1** (one reference time per report) is part of the report bundle (WP6, Phase 3). The "Data used" table
+>   already shows every dataset's time next to the crawl's.
+> - **Point 4 (renamed files):** a renamed file already keeps the months counted under its old name. Requests made
+>   under the old name after the rename are still missed, which stays limitation L07.
 
 1. **Reference time.** Each report has one *reference time*: the end time of the crawl it is built on. All other
    datasets are shown relative to it in a "data currency" table on the cover page (WP-PDF §7.2).
@@ -520,6 +530,12 @@ history is at 38% coverage comes out PROVISIONAL with the reason printed.
 ---
 
 ### WP9: Coverage on every metric (F7)
+
+> **Status 2026-11-05: implemented as a "Data used" table** (`provenance.data_status`), in the PDF before the first
+> figure and on the dashboard's Crawls page. For every dataset it shows its "as of" time and how many of the crawl's
+> files it covers, in red when below 100%. Figures that already showed their own base keep doing so: take-to-upload
+> gap, devices, views. Still open for Phase 3: a per-figure "based on k of N" line in the PDF's source lines.
+> Today every dataset covers 100% of the 96,428 files, so no figure is partial.
 
 For every metric in `figures.json`, store `coverage = {"of": N, "covered": k}`, and show it in the report
 wherever k < N. Today these are missing:
@@ -658,6 +674,10 @@ dependency).
 
 ### WP14: Logging and error reporting (F1, F7)
 
+> **Status 2026-11-05: point 2 implemented** (tool 2.1.0). Upload-date lookups that found nothing are retried at
+> every run, as were camera-data lookups already. Errors and incomplete jobs are recorded in the run records (WP3).
+> Structured JSON logs (point 1) and log rotation (point 3) are not done; the run records cover what they were for.
+
 1. Write structured logs (one JSON object per line) alongside the human logs: `logs/<job>.jsonl`, with UTC time,
    run ID, level and event.
 2. Every caught error that is skipped over is counted in the run record and leads to `complete: false` or a
@@ -669,6 +689,16 @@ dependency).
 ---
 
 ### WP15: Fix data-correctness gaps found in review
+
+> **Status 2026-11-05:**
+> - **Points 1–2: implemented** (method M2). A thirtieth of the files is re-checked daily for uploader and upload
+>   time, and for current size; a new version gets its camera data looked up again. This costs about 130 requests
+>   and 1.5 minutes per crawl.
+> - **Point 3:** media types are retried when missing (already so).
+> - **Point 4:** language names are archived with every state.
+> - **Point 5: the label is fixed** ("in the category since"). Reading the real promotion date is not done.
+> - **Point 6:** covered by the "Data used" table.
+> - **Point 7: implemented** (`tracker.build_payload`).
 
 These affect accuracy directly:
 

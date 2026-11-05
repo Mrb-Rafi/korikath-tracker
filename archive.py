@@ -19,7 +19,8 @@ Standard library only. Usage:
     python archive.py restore STATE FOLDER     rebuild the data files of a state (seq number, state file name,
                                                or "latest") into an empty FOLDER, checking every hash
     python archive.py verify                   check the register chain, every state and every object
-    python archive.py find FILE                which state(s) recorded this exact file (e.g. a PDF report)
+    python archive.py find FILE                which state(s) recorded this exact file; for a PDF report, whether
+                                               the tracker issued it (by its SHA-256; PDFs themselves aren't kept)
 """
 
 import argparse
@@ -295,6 +296,12 @@ def cmd_find(args):
     found = False
     for line in register_lines():
         e = json.loads(line)
+        if e.get("pdf_sha256") == digest:
+            found = True
+            extra = json.loads((STATES / e["state"]).read_text(encoding="utf-8")).get("extra") or {}
+            print(f"  ISSUED: {extra.get('report_type', '')} report {extra.get('pdf', '')}, generated "
+                  f"{extra.get('generated_at', e['created_at'])}; built from the data of state {e['seq']} ({e['state']})")
+            continue
         state = json.loads((STATES / e["state"]).read_text(encoding="utf-8"))
         for rel, f in state["files"].items():
             if f["sha256"] == digest:

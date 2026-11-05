@@ -18,7 +18,10 @@ uploads per month, categories, views and most viewed files, wikis using the file
 files, devices, gaps and largest files. Each report states when it was generated and the crawl it is built on, and
 its file name holds the generation time, e.g. `Korikath_statistics_report_2026-10-30_1729Z.pdf` or
 `Korikath_contributor_Wasiul_Bahar_2026-10-30_1729Z.pdf` (UTC). Reports go straight to your browser's downloads,
-and a copy of each PDF is kept in the archive with the exact data it was built from (see **Archive** below). Making one takes
+and the archive records each PDF's fingerprint (SHA-256) with the exact data it was built from, so it can later tell
+whether a PDF was issued by the tracker (see **Archive** below); the PDF itself isn't kept. Every figure is computed
+afresh from the saved data, and the report opens with a **Data used** table: how current each kind of data is and
+how many files it covers. Making one takes
 5–15 seconds; it needs Microsoft Edge or Google Chrome (used in the background to print the PDF) and the dashboard
 opened with the shortcut.
 
@@ -34,7 +37,9 @@ The dashboard has three pages (the browser's Back button works between them):
   While a crawl runs, a line here shows its progress and time left.
 - **Crawls**: **Start quick check** (about 3 min) and **Start full crawl** (about 13 min) buttons, live progress
   with time left and the expected finish time, the **scheduled crawls** (next run and how the last one went), and
-  **Saved crawls**: every crawl stored on this PC with its type, totals, changes, how long it took and its size.
+  **Data status**: how current each kind of data is ("as of", UTC) and how many of the latest crawl's files it
+  covers, with the tool version, method version and code commit that built the dashboard. Then **Saved crawls**:
+  every crawl stored on this PC with its type, totals, changes, how long it took and its size.
   A crawl runs in the background with no window, so you can close the page and it keeps going. When it's done the
   page refreshes itself with the new results.
 - **On-wiki usage**: where Korikath files are used on other Wikimedia wikis (Wikipedias, Wikidata, Wikivoyage and
@@ -69,7 +74,9 @@ The dashboard has three pages (the browser's Back button works between them):
   contributors (also a Views column on the Contributors page). A separate daily job (11:00 AM, its own lock so it
   never blocks a crawl) first collects each file's monthly history (one time, ~24 hours for all files, saved as it
   goes), then each day brings a thirtieth of the files up to date with daily figures, so every file is updated once
-  a month; recent months and days show as partial until then. It makes one request at a time and never more than
+  a month. **All view totals run to one common cutoff**: complete months, from January 2015 to the last month every
+  file has been counted through (shown with every total, e.g. "Jan 2015 – Sep 2026"); what has been counted after it
+  is partial and left out until every file has caught up. It makes one request at a time and never more than
   180 a minute (Wikimedia allows identified tools 200). Data in `views.json.gz`. While it runs, the Views page shows
   live progress and time left (from `views_status.js`); the figures are rebuilt every 500 files and a "Refresh"
   prompt appears when newer ones are ready.
@@ -142,8 +149,8 @@ So that every number the tracker has ever shown can be traced back to the exact 
 (scheduled or started by a button: crawls, usage checks, the views job, lookups) and every PDF report ends by
 recording the **state** of all data files, crawl snapshots, crawl reports, CSV files, logs and the code in
 `archive\`. Each distinct file content is stored once, named by its SHA-256 fingerprint, so a file that hasn't
-changed takes no extra space (roughly 6–12 MB a day in all). A report's state also keeps the PDF itself and the data
-it was printed from. The register `archive\register.jsonl` lists every state, each line chained to the one before
+changed takes no extra space (roughly 6–12 MB a day in all). A report's state records the PDF's fingerprint, a
+fingerprint of all its figures, and the state of the data it was computed from; the PDF itself isn't stored. The register `archive\register.jsonl` lists every state, each line chained to the one before
 it by its fingerprint, so a later edit or deletion is detectable. Times in the archive are UTC. Archiving began on
 4 Nov 2026 (07:47 UTC); the data's earlier states weren't kept, except the crawl snapshots and crawl reports.
 

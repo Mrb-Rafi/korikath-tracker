@@ -363,16 +363,28 @@ def merge_into_cache(fetched):
     save_json(UPLOADS_FILE, cache, compact=True)
 
 
-def update_upload_dates(api, file_ids, progress=None):
-    """Fetch upload dates only for files not in the cache yet (normally just the new uploads).
-    Entries from before uploaders were stored (a bare date) are looked up again once."""
+def update_upload_dates(api, file_ids, progress=None, refresh=False):
+    """Fetch upload dates for files not in the cache yet (normally just the new uploads), and again for files
+    whose lookup found nothing before (retried at every run until it succeeds). Entries from before uploaders
+    were stored (a bare date) are looked up again once. With `refresh`, also a fresh look at one thirtieth of the
+    files (a different thirtieth each day): an uploader's account can be renamed, and an early version of a file
+    can be hidden or restored, so every cached entry is checked once a month (methodology: ROTATION_DAYS)."""
     cache = load_json(UPLOADS_FILE, {})
-    missing = [pid for pid in file_ids if pid not in cache or isinstance(cache[pid], str)]
+    missing = [pid for pid in file_ids if pid not in cache or cache[pid] is None or isinstance(cache[pid], str)]
     if missing:
-        print(f"Fetching upload dates for {len(missing)} file(s) not seen before ...")
+        print(f"Fetching upload dates for {len(missing)} file(s) not seen before or not found before ...")
         # Long first fills save their progress every 100 requests, so an interruption loses little.
         cache.update(fetch_upload_dates(api, missing, progress, save_every=100))
         save_json(UPLOADS_FILE, cache, compact=True)
+    if refresh:
+        day = int(time.time() // 86400) % ROTATION_DAYS
+        todo = [pid for pid in file_ids if pid not in missing and int(pid) % ROTATION_DAYS == day]
+        fresh = fetch_upload_dates(api, todo) if todo else {}
+        changed = {pid: v for pid, v in fresh.items() if v is not None and v != cache.get(pid)}
+        if changed:
+            cache.update(changed)
+            save_json(UPLOADS_FILE, cache, compact=True)
+        print(f"Upload dates and uploaders re-checked for {len(todo):,} file(s); {len(changed):,} changed.")
     return len(missing)
 
 
@@ -769,7 +781,28 @@ def update_file_details(api, files, progress=None):
     if recheck:
         g, _ = fetch_file_details(api, recheck, False)
         _merge_details(g, {})
+        # A file can be overwritten with a new version (new size, new camera data). The same thirtieth gets a cheap
+        # look at its current size; files whose size changed have their camera data and size looked up again.
+        exif = load_json(EXIF_FILE, {})
+        sizes = current_sizes(api, recheck)
+        changed = [pid for pid, size in sizes.items()
+                   if isinstance(exif.get(pid), list) and len(exif[pid]) >= 6 and size is not None and size != exif[pid][5]]
+        if changed:
+            g, e = fetch_file_details(api, changed, True)
+            _merge_details(g, e)
+        print(f"Locations re-checked for {len(recheck):,} file(s); {len(changed):,} with a new version looked up again.")
     return len(new), len(recheck)
+
+
+def current_sizes(api, pageids):
+    """{page id: size in bytes of the current version}, 50 files per request."""
+    out = {}
+    for i in range(0, len(pageids), 50):
+        for data in api.query_all(prop="imageinfo", pageids="|".join(pageids[i:i + 50]), iiprop="size"):
+            for page in data["query"]["pages"]:
+                info = page.get("imageinfo")
+                out[str(page.get("pageid", ""))] = info[0].get("size") if info else None
+    return out
 
 
 
@@ -1313,6 +1346,19 @@ def category_subtrees(snapshot):
     return {cid: below(cid) for cid in cats}
 
 
+def views_cutoff(counted_through):
+    """The last month ("YYYY-MM") whose every day has been counted for all files, from each file's
+    counted-through date ("YYYY-MM-DD"); None if no file has been counted through a whole month."""
+    if not counted_through:
+        return None
+    first = date.fromisoformat(min(counted_through))
+    month_end = (first.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    if first == month_end:
+        return f"{first:%Y-%m}"
+    prev = first.replace(day=1) - timedelta(days=1)
+    return f"{prev:%Y-%m}" if prev.isoformat() >= VIEWS_FROM[:4] + "-" + VIEWS_FROM[4:6] + "-01" else None
+
+
 def views_summary(snapshot, uploads):
     """All-time and monthly totals (all and human), daily totals, and the most viewed files, categories
     and contributors, for the files now in the project."""
@@ -1321,7 +1367,15 @@ def views_summary(snapshot, uploads):
         return None
     files, vf = snapshot["files"], data["files"]
     have = [pid for pid in files if pid in vf]
-    per_file = {pid: [sum(m[0] for m in vf[pid][2].values()), sum(m[1] for m in vf[pid][2].values())] for pid in have}
+    # Totals run to one common cutoff: the last complete month that every counted file has been counted through
+    # (the daily updates reach different files on different days). Months after it are partial and are shown
+    # apart, never added to the totals (methodology: VIEWS_TOTALS).
+    cutoff = views_cutoff([vf[pid][1] for pid in have])
+    in_total = (lambda m: m <= cutoff) if cutoff else (lambda m: False)
+    per_file = {pid: [sum(v[0] for m, v in vf[pid][2].items() if in_total(m)),
+                      sum(v[1] for m, v in vf[pid][2].items() if in_total(m))] for pid in have}
+    after = [sum(v[0] for pid in have for m, v in vf[pid][2].items() if not in_total(m)),
+             sum(v[1] for pid in have for m, v in vf[pid][2].items() if not in_total(m))]
     months = {}
     for pid in have:
         for m, (a, h) in vf[pid][2].items():
@@ -1361,6 +1415,7 @@ def views_summary(snapshot, uploads):
             cat_rows.append([cats[cid]["title"], a, sum(per_file[p][1] for p in fset if p in per_file), len(fset)])
     top = sorted(have, key=lambda p: -per_file[p][0])[:100]
     return {"files": len(files), "with_history": len(have), "checked_through": ends[0] if ends else None,
+            "totals_from": VIEWS_FROM[:4] + "-" + VIEWS_FROM[4:6], "cutoff_month": cutoff, "after_cutoff": after,
             "running": not _lock_free(VIEWS_LOCK),
             "all": sum(x[0] for x in per_file.values()), "human": sum(x[1] for x in per_file.values()),
             "months": month_rows, "daily": sorted([d, r[0], r[1], r[2]] for d, r in data["daily"].items()),
@@ -1675,7 +1730,7 @@ def tree_summary(snapshot):
     return {k: snapshot[k] for k in ("root", "taken_at", "total_files", "total_categories")} | {"categories": tree}
 
 
-def write_removed_files_csv():
+def write_removed_files_csv(write=True):
     """All files that have ever left the project tree, from every saved report (oldest crawl first),
     as a spreadsheet with links. Returns (columns, rows, crawl time of each row); the dashboard uses
     these to download any date range."""
@@ -1694,15 +1749,47 @@ def write_removed_files_csv():
                          csv_time(d["timestamp"]) if d.get("timestamp") else "", d.get("comment", ""),
                          "https://commons.wikimedia.org/w/index.php?title=Special:Log&page=" + urllib.parse.quote(f["title"]),
                          f.get("current_title", "") if not deleted else ""] + attrib_cells(f.get("by")))
-    # utf-8-sig so Excel shows Bengali and other scripts correctly.
-    with REMOVED_CSV.open("w", encoding="utf-8-sig", newline="") as fh:
-        w = csv.writer(fh)
-        w.writerow(columns)
-        w.writerows(rows)
+    if write:
+        # utf-8-sig so Excel shows Bengali and other scripts correctly.
+        with REMOVED_CSV.open("w", encoding="utf-8-sig", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(columns)
+            w.writerows(rows)
     return columns, rows, found
 
 
+def data_status_rows(full_snapshot, snap_path):
+    """How current and complete each dataset is (provenance.data_status); never stops a build."""
+    if not full_snapshot:
+        return None
+    try:
+        import provenance
+        return provenance.data_status(full_snapshot, snap_path.name)
+    except Exception as e:  # noqa: BLE001
+        print(f"WARNING: could not work out the data status: {e}", file=sys.stderr)
+        return None
+
+
+def build_info_safe():
+    try:
+        import version
+        return version.build_info()
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def build_dashboard():
+    payload = build_payload()
+    blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    html = TEMPLATE_FILE.read_text(encoding="utf-8").replace("/*__DATA__*/null", blob)
+    DASHBOARD_FILE.write_text(html, encoding="utf-8")
+    print(f"Dashboard written: {DASHBOARD_FILE}")
+    return payload["generated_at"]  # an open dashboard reloads when this changes
+
+
+def build_payload(write=True):
+    """Every figure the dashboard and the PDF reports show, computed from the saved data files. With `write`,
+    also rewrites removed_files.csv (the dashboard build does; a report doesn't touch any file)."""
     history = load_json(HISTORY_FILE, [])
     snap_path = latest_snapshot()
     full_snapshot = load_json(snap_path) if snap_path else None
@@ -1720,12 +1807,13 @@ def build_dashboard():
     reports = []
     for path in sorted(REPORT_DIR.glob("*.json"))[-REPORTS_IN_DASHBOARD:]:
         reports.append(load_json(path))
-    removed_columns, removed_rows, removed_found = write_removed_files_csv()
-    try:  # the removed-files list is rebuilt here, outside any job: keep its metadata current
-        import provenance
-        provenance.refresh_if_stale([REMOVED_CSV] + list(provenance.data_files()), "dashboard build")
-    except Exception as e:  # noqa: BLE001
-        print(f"WARNING: could not update removed_files.csv metadata: {e}", file=sys.stderr)
+    removed_columns, removed_rows, removed_found = write_removed_files_csv(write)
+    if write:
+        try:  # the removed-files list is rebuilt here, outside any job: keep its metadata current
+            import provenance
+            provenance.refresh_if_stale([REMOVED_CSV] + list(provenance.data_files()), "dashboard build")
+        except Exception as e:  # noqa: BLE001
+            print(f"WARNING: could not update removed_files.csv metadata: {e}", file=sys.stderr)
     sizes = {p.name: p.stat().st_size for p in SNAPSHOT_DIR.glob("*.json.gz")}
     for h in history:
         h["size"] = sizes.get(h.get("snapshot"))  # None if that snapshot was deleted
@@ -1734,12 +1822,10 @@ def build_dashboard():
                "assessments": assessments, "languages": load_json(LANGS_FILE, {}), "places": places,
                "removed_files": {"columns": removed_columns, "rows": removed_rows, "found": removed_found},
                "views": views_summary(full_snapshot, uploads) if full_snapshot else None,
+               "data_status": data_status_rows(full_snapshot, snap_path),
+               "build": build_info_safe(),
                "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
-    blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    html = TEMPLATE_FILE.read_text(encoding="utf-8").replace("/*__DATA__*/null", blob)
-    DASHBOARD_FILE.write_text(html, encoding="utf-8")
-    print(f"Dashboard written: {DASHBOARD_FILE}")
-    return payload["generated_at"]  # an open dashboard reloads when this changes
+    return payload
 
 
 # ------------------------------------------------------------------------ main
@@ -1875,13 +1961,14 @@ def _run(config, started, base, force_full, usage=False):
     categories, files, stats = crawl(api, root, config.get("max_depth"), config.get("exclude_categories", []),
                                      config.get("max_categories", 5000), progress,
                                      prev=None if full else prev, since=since)
+    crawl_finished = datetime.now(timezone.utc).isoformat(timespec="seconds")
     def dates_progress(done, total):
         if time.monotonic() - last[0] >= 2:
             last[0] = time.monotonic()
             write_status(**base, running=True, phase="dates", categories=len(categories), files=len(files),
                          dates_done=done, dates_total=total)
 
-    update_upload_dates(api, list(files), dates_progress)
+    update_upload_dates(api, list(files), dates_progress, refresh=True)
     media = media_counts(files, update_media_types(api, files))
 
     def details_progress(done, total):
@@ -1905,7 +1992,10 @@ def _run(config, started, base, force_full, usage=False):
     snapshot = {
         "schema": 1,
         "root": root,
-        "taken_at": started.isoformat(timespec="seconds"),
+        "taken_at": started.isoformat(timespec="seconds"),  # when the crawl started (the snapshot's name)
+        # The tree was read between these two times (limitation L03: a change made meanwhile may or may not be in it).
+        "crawl_started_at": base.get("crawl_started_at"),
+        "crawl_finished_at": crawl_finished,
         "max_depth": config.get("max_depth"),
         "total_files": len(files),
         "total_categories": len(categories),
@@ -1921,6 +2011,8 @@ def _run(config, started, base, force_full, usage=False):
         "total_files": len(files),
         "total_categories": len(categories),
         "compared_with": prev["taken_at"] if prev else None,
+        "crawl_started_at": base.get("crawl_started_at"),
+        "crawl_finished_at": crawl_finished,
         "mode": "full" if full else "quick",
         "media": media,
         "requests": api.requests - requests_before,  # same measure as requests_done in status.js

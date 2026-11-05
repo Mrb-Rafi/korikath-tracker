@@ -16,12 +16,12 @@ from pathlib import Path
 
 import methodology
 
-TOOL_VERSION = "2.0.0"
+TOOL_VERSION = "2.1.0"
 BASE = Path(__file__).resolve().parent
 
 # Format version of each data file (bumped when its structure changes).
 SCHEMA_VERSIONS = {
-    "snapshot": 1, "crawl_report": 2, "history": 1, "uploads": 1, "mediatypes": 1, "usage": 1, "usage_history": 1,
+    "snapshot": 2, "crawl_report": 2, "history": 2, "uploads": 1, "mediatypes": 1, "usage": 1, "usage_history": 1,
     "usage_log": 2, "usage_current": 1, "assessments": 1, "assessment_history": 1, "geo": 1, "exif": 1, "views": 1,
     "languages": 1, "removed_files": 2,
 }

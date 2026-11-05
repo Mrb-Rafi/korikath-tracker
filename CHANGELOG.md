@@ -3,6 +3,39 @@
 Every version of the tracker's code (tool version) and of what it counts (method version). Each entry says which
 figures a change affects. Versions are recorded in every data file's metadata, every run record and every report.
 
+## Tool 2.1.0 · Method M2 · 2026-11-05
+
+**Method M2 (changes to what is counted):**
+
+- **File requests ("views") are totalled to one common cutoff.** Totals cover complete months from January 2015 to
+  the last month that *every* counted file has been counted through (the daily updates reach different files on
+  different days). Requests counted after the cutoff are shown apart as partial, and never added. Before, each file's
+  total ran to its own last update, so the project total mixed different end dates. This affects:
+  - all view totals: project, per category, per file and per uploader, in the dashboard and both PDF reports
+  - the yearly table in the report
+
+  On 5 Nov 2026 the cutoff is September 2026. 948,504 requests counted in October and November are left out until
+  every file has been counted through October.
+- **A thirtieth of the files is re-checked every day** (every file once a month):
+  - its original upload time and uploader, since accounts get renamed and early versions get hidden or restored
+  - its current size; a file overwritten with a new version has its camera data and size looked up again
+  - lookups that found nothing before are retried at every run, instead of never again
+
+**Tool 2.1.0 (changes to the program):**
+
+- **"Data used" table** in the PDF report and on the dashboard's Crawls page: how current each dataset is ("as of",
+  UTC) and how many of the crawl's files it covers. The dashboard also shows which tool version, method version and
+  code commit built it.
+- **Reports compute every figure from the data files directly** (`tracker.build_payload`). Before, they read the
+  copy embedded in `dashboard.html`, which could be older than the data.
+- **PDFs are no longer stored in the archive.** Only their SHA-256 fingerprint is kept, with the data state they
+  were built from, together with a fingerprint of all the figures in the report. `python archive.py find <pdf>` still
+  says whether the tracker issued a PDF and from which data.
+- **Crawls record when they started and finished** (`crawl_started_at`, `crawl_finished_at` in the snapshot and in
+  `history.json`).
+- **Label fix:** assessment dates are labelled "in the category since", not "promoted" (limitation L12).
+- Tests for all of the above (`tests/test_figures.py`).
+
 ## Tool 2.0.0 · Method M1 · 2026-11-05
 
 The first versioned release. Everything before it is "version 1" (unversioned, 23 Oct – 4 Nov 2026).

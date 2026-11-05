@@ -20,7 +20,7 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
-METHOD_VERSION = "M1"
+METHOD_VERSION = "M2"
 METHOD_DATE = "2026-11-05"
 
 # ------------------------------------------------------------------------------------------------ parameters
@@ -28,12 +28,15 @@ METHOD_DATE = "2026-11-05"
 TIME_ZONE = "UTC"                        # every stored and shown time; days and months are UTC days and months
 QUICK_CHECK_OVERLAP = timedelta(hours=1)  # a quick check / assessment check also reads what was added this long
                                           # before the previous run started, so nothing added around then is missed
-ROTATION_DAYS = 30                        # locations and daily view counts: 1/30 of the files are re-checked each day
+ROTATION_DAYS = 30                        # 1/30 of the files are re-checked each day: locations, current size (a
+                                          # new version gets its camera data looked up again), upload date and
+                                          # uploader, and daily view counts. Every file is re-checked once a month.
 CATCH_ALL_SHARE = 0.25                    # a category directly holding more than this share of all files is a
                                           # "catch-all" (All images, Uploaded via Campaign, ...): left out of
                                           # per-uploader category lists only
 WRONG_CLOCK_EARLIEST_GAP_DAYS = -1        # a photo "taken" more than this many days after its upload: wrong camera clock
 WRONG_CLOCK_BEFORE_YEAR = 2005            # a photo "taken" before this year: camera clock never set
+VIEWS_TOTALS = "complete months, January 2015 to the last month every counted file has been counted through"
 ATTRIBUTION_OVERLAP = timedelta(hours=1)  # who-made-it lookups also read edits this long before the previous check
 ATTRIBUTION_LATE = timedelta(days=7)      # ... and, for what is still unexplained, this far further back
 ATTRIBUTION_MAX_REQUESTS = 1500           # per check, across all wikis
@@ -171,7 +174,9 @@ DEFINITIONS = [
      "limits": ["L17"]},
     {"id": "D12", "name": "File requests (shown as 'views')",
      "definition": "How often the file itself or a thumbnail of it was requested from Wikimedia's servers, from any "
-                   "page or app, per Wikimedia's media request statistics, from January 2015.",
+                   "page or app, per Wikimedia's media request statistics. Totals cover complete months, from "
+                   "January 2015 to the last month that every counted file has been counted through (the cutoff, "
+                   "stated with every total); requests after the cutoff are shown apart as partial and never added.",
      "unit": "requests", "source": "Wikimedia Analytics API: mediarequests/per-file, agent all-agents",
      "limits": ["L04", "L06", "L07"]},
     {"id": "D13", "name": "Requests not flagged as automated (shown as 'by people')",

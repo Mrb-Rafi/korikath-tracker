@@ -72,6 +72,11 @@ def sha256_file(path):
     return h.hexdigest()
 
 
+def modified(path):
+    """When a file was last written (UTC, ISO)."""
+    return datetime.fromtimestamp(Path(path).stat().st_mtime, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def meta_path(path):
     return Path(str(path) + ".meta")
 
@@ -208,7 +213,7 @@ def write_sidecars(changed, run, extra_notes=()):
             "dataset": name, "file": path.relative_to(BASE).as_posix(), "description": desc, "source": source,
             "schema_version": version.SCHEMA_VERSIONS.get(name), **version.build_info(),
             "written_by_run": run["run_id"], "written_at": utc_now(),
-            "as_of": tracker.iso_utc(as_of) if as_of and "T" in str(as_of) else (as_of or run.get("finished_at")),
+            "as_of": tracker.iso_utc(as_of) if as_of and "T" in str(as_of) else (as_of or modified(path)),
             "complete": run["status"] == "ok", "coverage": coverage,
             "based_on_snapshot": snap_name if based else None,
             "based_on_snapshot_sha256": sha256_file(tracker.SNAPSHOT_DIR / snap_name) if based and snap_name else None,
@@ -222,6 +227,50 @@ def refresh_if_stale(paths, label):
     stale = [p for p in paths if p.exists() and (read_meta(p) or {}).get("data_sha256") != sha256_file(p)]
     if stale:
         write_sidecars(stale, {"run_id": label, "status": "ok", "finished_at": utc_now()})
+
+
+STATUS_ROWS = [  # (data file, dataset, label shown in the dashboard and reports)
+    ("uploads.json.gz", "uploads", "Upload dates and uploaders"),
+    ("mediatypes.json", "mediatypes", "Kinds of non-image media"),
+    ("usage.json.gz", "usage", "On-wiki usage"),
+    ("assessments.json.gz", "assessments", "Quality, featured and valued images"),
+    ("geo.json.gz", "geo", "Locations on Commons"),
+    ("exif.json.gz", "exif", "Camera metadata and file sizes"),
+    ("views.json.gz", "views", "File requests (views)"),
+]
+
+
+def _when(t):
+    import tracker
+    return tracker.fmt_time(t) if t else "?"
+
+
+def data_status(snapshot, snap_name):
+    """How current and complete each dataset is, relative to the crawl `snapshot`: one row per dataset,
+    {dataset, label, as_of, covered, of, share, note}. Read from the data files themselves, so it is right even
+    in the middle of a job (before the .meta sidecars are refreshed)."""
+    rows = [{"dataset": "snapshot", "label": "Project files (crawl)", "as_of": snapshot.get("crawl_finished_at") or snapshot.get("taken_at"),
+             "covered": snapshot.get("total_files"), "of": snapshot.get("total_files"), "share": 1.0,
+             "note": f"{snapshot.get('total_categories')} categories; crawl started {_when(snapshot.get('taken_at'))}"
+                     + (f", finished {_when(snapshot['crawl_finished_at'])}" if snapshot.get("crawl_finished_at") else "")}]
+    for rel, name, label in STATUS_ROWS:
+        path = BASE / rel
+        if not path.exists():
+            rows.append({"dataset": name, "label": label, "as_of": None, "covered": 0, "of": None, "share": None,
+                         "note": "not collected yet"})
+            continue
+        as_of, cov, notes = describe(path, name, snapshot, snap_name)
+        cov = cov or {}
+        note = "; ".join(notes)
+        if name == "views" and cov.get("counted_through_earliest"):
+            note = (f"each file counted through {cov['counted_through_earliest']} to {cov['counted_through_latest']}; " + note).strip("; ")
+        if name == "assessments" and cov.get("last_check"):
+            note = (f"last check: {cov['last_check']}; " + note).strip("; ")
+        if as_of is None:  # a cache that is added to over time: as of its last update
+            as_of = modified(path)
+        rows.append({"dataset": name, "label": label, "as_of": as_of, "covered": cov.get("covered"), "of": cov.get("of"),
+                     "share": cov.get("share"), "note": note})
+    return rows
 
 
 # ---------------------------------------------------------------------------------------------- run records

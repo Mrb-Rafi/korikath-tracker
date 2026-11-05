@@ -92,6 +92,13 @@ def day(iso):
     return f"{t.day} {t:%b %Y}"
 
 
+def views_period(V):
+    """'Jan 2015 – Sep 2026': the complete months view totals cover (tracker.views_cutoff)."""
+    if not V.get("cutoff_month"):
+        return "no complete month yet"
+    return f"{month_name(V.get('totals_from') or '2015-01')} – {month_name(V['cutoff_month'])}"
+
+
 def month_name(m):
     return datetime.strptime(m, "%Y-%m").strftime("%b %Y")
 
@@ -334,12 +341,9 @@ def page(title, kicker, meta_rows, body):
 
 
 def dashboard_data():
-    """The data the dashboard shows, as embedded in dashboard.html (built if it doesn't exist yet)."""
-    if not tracker.DASHBOARD_FILE.exists():
-        tracker.build_dashboard()
-    text = tracker.DASHBOARD_FILE.read_text(encoding="utf-8")
-    start = text.index("const DATA = ") + len("const DATA = ")
-    data, _ = json.JSONDecoder().raw_decode(text[start:])
+    """Every figure, computed afresh from the saved data files (the same computation as the dashboard's), so a
+    report never depends on when the dashboard was last rebuilt."""
+    data = tracker.build_payload(write=False)
     if not data or not data.get("snapshot"):
         raise RuntimeError("There is no crawl yet, so there is nothing to report. Run a crawl first.")
     return data
@@ -398,9 +402,23 @@ def project_report(D, generated):
     if A:
         meta.append(("Assessments checked", esc(fmt_time(A["checked_at"]))))
     if V:
-        meta.append(("Views counted", f"to {esc(day(V['checked_through']))} · {fmt(V['with_history'])} of {fmt(V['files'])} files"
+        meta.append(("Views counted", f"{esc(views_period(V))} (complete months) · {fmt(V['with_history'])} of {fmt(V['files'])} files"
                      + (" (still being collected)" if V["with_history"] < V["files"] else "")))
     body = []
+
+    # How current and complete each dataset is (before any figure, so every figure can be read against it)
+    if D.get("data_status"):
+        body.append(section("Data used in this report", table(
+            ["Data", "As of (UTC)", "Files covered", "Share", "Notes"],
+            [[esc(r["label"]), esc(r["as_of"] if r["as_of"] and len(str(r["as_of"])) == 10 else fmt_time(r["as_of"]) if r["as_of"] else "—"),
+              (fmt(r["covered"]) if r["covered"] is not None else "—") + (f" of {fmt(r['of'])}" if r["of"] is not None else ""),
+              pct(r["covered"], r["of"]) if r["share"] is not None else "—", esc(r.get("note") or "")]
+             for r in D["data_status"]], num=(2, 3)),
+            "Each kind of data was collected at its own time. Where a dataset does not cover every file of the crawl, "
+            "the figures built on it are based on the files it covers."
+            + (f" Built by Korikath Tracker {esc(D['build']['tool_version'])}, method {esc(D['build']['method_version'])}"
+               + (f", code commit {esc(D['build']['git_commit'])}" if D['build'].get('git_commit') else "") + "."
+               if D.get("build") else "")))
 
     # Headline numbers
     cards = [("Total files", fmt(total), None), ("Categories in tree", fmt(snap["total_categories"]), None)]
@@ -417,7 +435,7 @@ def project_report(D, generated):
                           f"{fmt(len(rows))} files on the main pages of {fmt(len(wikis))} wikis"))
     if V:
         cards.append(("All-time views" if V["with_history"] >= V["files"] else "Views so far", big(V["all"]),
-                      f"{big(V['human'])} by people ({pct(V['human'], V['all'])})"))
+                      f"{big(V['human'])} by people ({pct(V['human'], V['all'])}) · {esc(views_period(V))}"))
     if U:
         cards += [("Files used on other wikis", fmt(U["all"]["files_used"]), f"{pct(U['all']['files_used'], total)} of all files"),
                   ("Pages using the files", fmt(U["all"]["pages"]), f"on {fmt(U['all']['wikis'])} wikis · {fmt(U['all']['usages'])} uses")]
@@ -490,7 +508,7 @@ def project_report(D, generated):
 
     # Views
     if V:
-        months = [(m, a, h) for m, a, h, _ in V["months"]]
+        months = [(m, a, h) for m, a, h, _ in V["months"] if V.get("cutoff_month") and m <= V["cutoff_month"]]
         years = {}
         for m, a, h in months:
             y = years.setdefault(m[:4], [0, 0])
@@ -501,7 +519,7 @@ def project_report(D, generated):
             ("All views" + (" so far" if partial else ""), big(V["all"]), fmt(V["all"])),
             ("Views by people", big(V["human"]), pct(V["human"], V["all"]) + " of all views"),
             ("Views by bots and crawlers", big(V["all"] - V["human"]), pct(V["all"] - V["human"], V["all"])),
-            ("Files counted", fmt(V["with_history"]), f"of {fmt(V['files'])}, to {day(V['checked_through'])}")])
+            ("Files counted", fmt(V["with_history"]), f"of {fmt(V['files'])}, through {esc(views_period(V))}")])
             + '<div class="chartbox"><h3>Views per month</h3>' + chart(months, colors=(MUTED, ACCENT), legend=["All views", "By people"])
             + "<h3>All-time views (running total)</h3>" + chart(running_total([(m, a) for m, a, _ in months]), "area") + "</div>"
             + table(["Year", "All views", "By people", "Share by people"],
@@ -512,7 +530,9 @@ def project_report(D, generated):
             + "<h3>Most viewed categories</h3>"
             + table(["Category", "Files", "All views", "By people"],
                     [[link(t), fmt(n), fmt(a), fmt(h)] for t, a, h, n in V["categories"][:20]], num=(1, 2, 3)),
-            "How often each file itself was loaded (Wikimedia media requests), from January 2015. Months are complete months."
+            f"How often each file itself was loaded (Wikimedia media requests). All figures cover {esc(views_period(V))}: complete "
+            "months that every file has been counted through."
+            + (f" The {fmt(V['after_cutoff'][0])} views counted after that are partial and not included." if (V.get("after_cutoff") or [0])[0] else "")
             + (f" Still collecting: {fmt(V['with_history'])} of {fmt(V['files'])} files counted so far." if partial else "")))
         body[-1] = body[-1].replace("<section>", '<section class="break">', 1)
 
@@ -574,7 +594,9 @@ def project_report(D, generated):
             (KIND_NAMES[k], fmt(c.get(k)), None) for k in ("qi", "fp", "vi", "fm", "potd", "motd") if k in c])
             + f'<p class="sub">{fmt(A["any"])} files ({pct(A["any"], A["total_files"])}) are quality, featured or valued. '
               "Counted from the Commons-wide categories, not the project's own.</p>"
-            + "<h3>Promotions per month</h3>" + table(
+            + "<h3>Files entering the assessment categories, per month</h3>"
+            + '<p class="sub">By the month each file was added to the Commons-wide category, which is usually, but not '
+              'always, the month it was promoted (limitation L12).</p>' + table(
                 ["Month", "Quality", "Featured", "Valued", "Featured media"],
                 [[month_name(m), *(fmt(monthly[m].get(k, 0)) for k in ("qi", "fp", "vi", "fm"))] for m in sorted(monthly, reverse=True)],
                 num=(1, 2, 3, 4))
@@ -679,7 +701,7 @@ def project_report(D, generated):
 # ----------------------------------------------------------- contributor report
 
 
-def contributor_details(name):
+def contributor_details(name, cutoff=None):
     """A contributor's files and the details of them from the saved data files."""
     snap = tracker.load_json(tracker.latest_snapshot())
     files = snap["files"]
@@ -731,8 +753,10 @@ def contributor_details(name):
                 out["assessed"].setdefault(k, []).append((title, assess[k][pid]))
         v = views.get(pid)
         if v:
-            out["views"][title] = [sum(m[0] for m in v[2].values()), sum(m[1] for m in v[2].values())]
-            for m, (a, h) in v[2].items():
+            # The same common cutoff as the project totals, so a member's views add up to the project's.
+            months = {m: x for m, x in v[2].items() if cutoff and m <= cutoff}
+            out["views"][title] = [sum(m[0] for m in months.values()), sum(m[1] for m in months.values())]
+            for m, (a, h) in months.items():
                 row = out["view_months"].setdefault(m, [0, 0])
                 row[0] += a
                 row[1] += h
@@ -754,7 +778,7 @@ def user_report(D, name, generated):
     total = snap["total_files"]
     n, nfiles, first, last, used, uses, per_month, cats_top, ncats = u
     rank = users.index(u) + 1
-    X = contributor_details(name)
+    X = contributor_details(name, (D.get("views") or {}).get("cutoff_month"))
     user_url = "https://commons.wikimedia.org/wiki/User:" + urllib.parse.quote(name.replace(" ", "_"))
     list_url = "https://commons.wikimedia.org/wiki/Special:ListFiles/" + urllib.parse.quote(name.replace(" ", "_"))
     hist = D.get("history") or []
@@ -763,7 +787,7 @@ def user_report(D, name, generated):
             ("Built on the crawl of", f"{esc(fmt_time(snap['taken_at']))}" + (f" ({esc(latest['mode'])} crawl)" if latest.get("taken_at") == snap["taken_at"] else "")),
             ("Commons", f'<a href="{esc(user_url)}">User page</a> · <a href="{esc(list_url)}">All this member&#39;s uploads</a>')]
     if V:
-        meta.append(("Views counted", f"to {esc(day(V['checked_through']))}"
+        meta.append(("Views counted", f"{esc(views_period(V))} (complete months)"
                      + (f" · {fmt(V['with_history'])} of {fmt(V['files'])} project files so far" if V["with_history"] < V["files"] else "")))
 
     counts = (A or {}).get("by_user", {}).get(name, {})
@@ -843,7 +867,7 @@ def user_report(D, name, generated):
             items = sorted(X["assessed"].get(k, []), key=lambda r: r[1] or "", reverse=True)
             if items:
                 parts.append(f"<h3>{KIND_NAMES[k]} <span class=pill>{fmt(len(items))}</span></h3>"
-                             + table(["File", "Promoted"], [[link(t), day(ts) if ts else "—"] for t, ts in items], num=(1,)))
+                             + table(["File", "In the category since"], [[link(t), day(ts) if ts else "—"] for t, ts in items], num=(1,)))
         if mp_rows:
             parts.append("<h3>On the main page</h3>" + table(
                 ["File", "Times", "Where"],
@@ -939,11 +963,15 @@ def make_report(user=None, out_dir=OUT_DIR):
         name = f"Korikath_statistics_report_{file_stamp(generated)}.pdf"
     pdf = html_to_pdf(page_html, Path(out_dir) / name)
     # Keep the PDF and everything it was built from (the data embedded in dashboard.html and all data files):
-    # `python archive.py find <pdf>` later tells which state an issued report came from.
+    # The PDF itself isn't kept (to save space): its SHA-256 is recorded with the state of all the data it was built
+    # from, so `python archive.py find <pdf>` can later tell whether a PDF was issued and from which data.
     import archive
     import hashlib
-    archive.safe_record("report", include_dashboard=True, extra_files={f"issued_reports/{name}": pdf},
+    figures = json.dumps({k: v for k, v in D.items() if k not in ("generated_at", "build")}, ensure_ascii=False,
+                         sort_keys=True, separators=(",", ":")).encode("utf-8")
+    archive.safe_record("report",
                         extra={"pdf": name, "pdf_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
+                               "figures_sha256": hashlib.sha256(figures).hexdigest(),
                                "report_type": "contributor" if user else "project", "contributor": user,
                                "generated_at": generated.strftime("%Y-%m-%dT%H:%M:%SZ")})
     return pdf
