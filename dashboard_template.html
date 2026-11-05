@@ -258,7 +258,7 @@
         <span class="nc-title">On-wiki usage <span aria-hidden="true">→</span></span>
         <span class="nc-sub" id="ncUsage"></span>
       </a>
-      <a class="nav-card" href="#/views">
+      <a class="nav-card" href="#/file-requests">
         <span class="nc-title">File requests <span aria-hidden="true">→</span></span>
         <span class="nc-sub" id="ncViews"></span>
       </a>
@@ -266,11 +266,11 @@
         <span class="nc-title">Map, devices &amp; metadata <span aria-hidden="true">→</span></span>
         <span class="nc-sub" id="ncPlaces"></span>
       </a>
-      <a class="nav-card" href="#/contributors">
+      <a class="nav-card" href="#/uploaders">
         <span class="nc-title">Uploaders <span aria-hidden="true">→</span></span>
         <span class="nc-sub" id="ncContrib"></span>
       </a>
-      <a class="nav-card" href="#/user-files">
+      <a class="nav-card" href="#/uploader-files">
         <span class="nc-title">Files by uploader in a category <span aria-hidden="true">→</span></span>
         <span class="nc-sub">Pick a category and a name: that person's files there, with the total</span>
       </a>
@@ -1242,7 +1242,7 @@ function renderContributors(C, snap) {
   };
   $("personPick").onchange = () => {
     const v = $("personPick").value.trim();
-    if (byName.has(v)) location.hash = "#/contributors?u=" + encodeURIComponent(v);
+    if (byName.has(v)) location.hash = "#/uploaders?u=" + encodeURIComponent(v);
   };
 
   // All uploaders
@@ -1281,7 +1281,7 @@ function renderContributors(C, snap) {
   $("contribFilter").oninput = drawTable;
   $("contribTable").onclick = (e) => {
     const b = e.target.closest("[data-person]");
-    if (b) location.hash = "#/contributors?u=" + encodeURIComponent(b.dataset.person);
+    if (b) location.hash = "#/uploaders?u=" + encodeURIComponent(b.dataset.person);
   };
   drawTable();
 
@@ -1289,7 +1289,7 @@ function renderContributors(C, snap) {
   redrawOnResize.push(() => { if (visible()) { drawChart && drawChart(); drawPerson(); } });
   window.addEventListener("hashchange", () => { if (visible()) setTimeout(() => { drawChart ? drawChart() : chart(); drawPerson(); }, 0); });
   if (visible()) chart(); else drawChart = null;
-  // A link straight to someone (#/contributors?u=Name) is read before this data exists, so apply it here.
+  // A link straight to someone (#/uploaders?u=Name) is read before this data exists, so apply it here.
   const q = location.hash.split("?")[1];
   showPerson(q ? new URLSearchParams(q).get("u") : null);
 }
@@ -1446,7 +1446,7 @@ function renderViews(V) {
   ], V.categories, 15);
   const files = new Map((DATA.contributors ? DATA.contributors.users : []).map(u => [u[0], u[1]]));
   sortTable("viewsUsers", [
-    {label: "Uploader", text: true, key: r => r[0], cell: r => `<a href="#/contributors?u=${encodeURIComponent(r[0])}">${esc(r[0])}</a>`},
+    {label: "Uploader", text: true, key: r => r[0], cell: r => `<a href="#/uploaders?u=${encodeURIComponent(r[0])}">${esc(r[0])}</a>`},
     {label: "File requests", cls: "num", key: r => r[1][0], cell: r => fmt(r[1][0])},
     {label: "Not flagged as automated", cls: "num", key: r => r[1][1], cell: r => fmt(r[1][1])},
     {label: "Per file", cls: "num", key: r => files.get(r[0]) ? r[1][0] / files.get(r[0]) : 0,
@@ -2708,7 +2708,7 @@ function pollStatus() {
   document.head.appendChild(sc);
 }
 
-// ---- Files by uploader in a category (#/user-files?c=Category&u=Name[&sub=0]). The server works it out
+// ---- Files by uploader in a category (#/uploader-files?c=Category&u=Name[&sub=0]). The server works it out
 // from the latest crawl and the cached uploaders (user_files.py), so it needs the dashboard opened with the shortcut.
 let ufLast = null;
 function setupUserFiles() {
@@ -2724,7 +2724,7 @@ function setupUserFiles() {
     q.set("c", $("ufCat").value.trim());
     if ($("ufUser").value.trim()) q.set("u", $("ufUser").value.trim());
     if (!$("ufSub").checked) q.set("sub", "0");
-    const hash = "#/user-files?" + q.toString();
+    const hash = "#/uploader-files?" + q.toString();
     if (location.hash === hash) showUserFiles(q, true); else location.hash = hash;
   };
   $("ufResult").onclick = (e) => {
@@ -2832,8 +2832,8 @@ const PAGE_TITLES = {home: "Korikath Tracker", crawls: "Crawls · Korikath Track
   userfiles: "Files by uploader · Korikath Tracker"};
 function route() {
   const [path, query] = location.hash.replace(/^#\/?/, "").split("?");
-  const name = {"crawls": "crawls", "changes": "changes", "usage": "usage", "contributors": "contributors", "places": "places", "views": "views",
-    "user-files": "userfiles"}[path] || "home";
+  const name = {"crawls": "crawls", "changes": "changes", "usage": "usage", "uploaders": "contributors", "places": "places",
+    "file-requests": "views", "uploader-files": "userfiles"}[path] || "home";
   if (name === "places") setTimeout(startMap, 0);
   const person = name === "contributors" && query ? new URLSearchParams(query).get("u") : null;
   for (const p of Object.keys(PAGE_TITLES)) $("page-" + p).hidden = p !== name;

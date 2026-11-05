@@ -92,7 +92,7 @@ The dashboard has three pages (the browser's Back button works between them):
   on, and a sortable, searchable table of everyone (files, share, first and latest upload, active months, files used
   on other wikis, categories). Pick a contributor (search box, or click a name) to see the member's monthly uploads chart,
   files by category, and on-wiki usage; each contributor has a shareable link
-  (`#/contributors?u=Name`). The category breakdown leaves out the catch-all categories (any category directly
+  (`#/uploaders?u=Name`). The category breakdown leaves out the catch-all categories (any category directly
   holding more than a quarter of all files: All images, Uploaded via Campaign, Unreviewed). These statistics come
   from the cached uploaders and upload dates, so they need no extra requests to Commons.
 - **Files by uploader in a category** (the "Files by uploader in a category" link): choose any category of the
@@ -101,7 +101,7 @@ The dashboard has three pages (the browser's Back button works between them):
   files placed directly in the category). The list is sortable, has previews, and **Download list (CSV)** saves it.
   Leave the name empty to see everyone who uploaded to the category with their counts; click a name there to list
   their files. Names match without regard to case or underscores ("mrb_rafi" finds "Mrb Rafi"). Each lookup has a
-  shareable link (`#/user-files?c=Category&u=Name`). It's worked out from the latest crawl and the cached uploaders,
+  shareable link (`#/uploader-files?c=Category&u=Name`). It's worked out from the latest crawl and the cached uploaders,
   so it makes no requests to Commons, and it needs the dashboard opened with the shortcut.
 - **File requests** (formerly "Views"): how often Korikath files are loaded (in articles, on Commons, elsewhere;
   thumbnails included), from Wikimedia's media request statistics, which start in January 2015: all file requests
