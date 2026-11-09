@@ -60,7 +60,8 @@ how many files it covers. Making one takes
 5–15 seconds; it needs Microsoft Edge or Google Chrome (used in the background to print the PDF) and the dashboard
 opened with the shortcut.
 
-The dashboard has five pages, reached from the tab bar at the top: **Overview**, **Collection**, **Reach**,
+The dashboard is styled Swiss Mono: black, white and greys (the inverse in dark mode), Archivo type, black
+rules instead of boxes. It has five pages, reached from the tab bar at the top: **Overview**, **Collection**, **Reach**,
 **Uploaders** and **Activity**. The browser's Back button works between them, and each section has its own address
 (`#/activity/crawls`, `#/reach/file-requests`, ...).
 

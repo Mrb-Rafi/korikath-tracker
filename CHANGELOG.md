@@ -3,6 +3,21 @@
 Every version of the tracker's code (tool version) and of what it counts (method version). Each entry says which
 figures a change affects. Versions are recorded in every data file's metadata, every run record and every report.
 
+## Tool 2.4.0 · Method M2 · 2026-11-09
+
+**The dashboard has a new look: Swiss Mono.**
+
+- **Colour:** black, white and greys only. Dark mode is the exact inverse, white on black. Emphasis comes from weight,
+  size, rules and solid fills, never colour:
+  - the Removed box has an inverted black heading bar
+  - removed and deleted badges are solid black, added ones are outlined
+  - a category a file left is struck through
+- **Type and layout:** Archivo type with uppercase headings. Boxes give way to black rules, and there are no rounded
+  corners.
+- **Charts:** black and grey; the category tree map uses greys.
+
+No content, page or figure changed.
+
 ## Tool 2.3.1 · Method M2 · 2026-11-09
 
 - **Overview order:** key figures first, then the growth charts, then the Removed box, then Latest.

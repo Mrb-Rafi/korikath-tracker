@@ -4,25 +4,30 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Korikath Tracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap">
 <style>
+  /* Swiss Mono: black, white and greys only. Emphasis comes from weight, size, rules and solid fills, never colour.
+     Dark mode is the exact inverse. --rule draws the structure (section and grid lines); --border the quiet lines. */
   :root {
-    --bg: #f6f5f1; --surface: #ffffff; --surface-2: #f0eee8; --border: #e2dfd6;
-    --text: #1d1c1a; --muted: #6b675f; --accent: #2f6b4f; --accent-soft: #e3efe8;
-    --danger: #a33a2b; --danger-soft: #f7e4e0; --warn: #8a5a00; --warn-soft: #f8edd5;
-    --info: #2d5a8c; --info-soft: #e1ebf6;
+    --bg: #ffffff; --surface: #ffffff; --surface-2: #f0f0f0; --border: #d4d4d4; --rule: #000000;
+    --text: #000000; --muted: #5c5c5c; --accent: #000000; --accent-soft: #ebebeb;
+    --danger: #000000; --danger-soft: #ffffff; --warn: #000000; --warn-soft: #ebebeb;
+    --info: #000000; --info-soft: #f0f0f0; --chart-2: #8c8c8c;
+    --font: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #151514; --surface: #1e1e1c; --surface-2: #262623; --border: #34332f;
-      --text: #ecebe6; --muted: #9c988e; --accent: #7cc4a0; --accent-soft: #1f3329;
-      --danger: #f08f80; --danger-soft: #3a211d; --warn: #e4b55c; --warn-soft: #362b17;
-      --info: #8db8e8; --info-soft: #1c2a3a;
+      --bg: #000000; --surface: #000000; --surface-2: #1a1a1a; --border: #3a3a3a; --rule: #ffffff;
+      --text: #ffffff; --muted: #a6a6a6; --accent: #ffffff; --accent-soft: #262626;
+      --danger: #ffffff; --danger-soft: #000000; --warn: #ffffff; --warn-soft: #262626;
+      --info: #ffffff; --info-soft: #1a1a1a; --chart-2: #8c8c8c;
+      color-scheme: dark;
     }
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--text);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    font: 15px/1.5 var(--font); }
   a { color: var(--info); text-decoration: none; }
   a:hover { text-decoration: underline; }
   .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
@@ -101,7 +106,7 @@
   .sb-wrap { display: grid; grid-template-columns: minmax(0, 640px) minmax(220px, 1fr); gap: 20px; align-items: start; }
   .sb svg { width: 100%; height: auto; display: block; }
   .sb path { stroke: var(--surface); stroke-width: 0.6px; }
-  .sb text { fill: #1b1b1b; font-size: 10px; }
+  .sb text { fill: #000000; font-size: 10px; }
   .sb .center-title { fill: var(--text); font-size: 13px; font-weight: 650; }
   .sb .center-sub { fill: var(--muted); font-size: 11px; }
   .sb-info { background: var(--surface-2); border-radius: 10px; padding: 14px; font-size: 13px; min-height: 140px; }
@@ -259,6 +264,70 @@
   .uf-form .grow input { width: 100%; }
   .notice { background: var(--info-soft); color: var(--text); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px; }
   @media (max-width: 520px) { .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } .kpi .value { font-size: 24px; } }
+
+  /* ---------------------------------------------------------------- Swiss Mono layer */
+  *, *::before, *::after { border-radius: 0 !important; }
+  a { color: var(--text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:hover { text-decoration-thickness: 2px; }
+  h1 { font-size: 36px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.02em; line-height: .95; }
+  header .sub { text-transform: uppercase; letter-spacing: .06em; font-size: 11.5px; margin-top: 8px; }
+  h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
+  h3 { font-weight: 700; }
+  .page-title { font-size: 34px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.02em; line-height: 1; letter-spacing: -0.01em; }
+  .part-title { font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em; border-top: 3px solid var(--rule); }
+  .page-head:has(.part-title) { border-top: 3px solid var(--rule); }
+  section { background: transparent; border: 0; border-top: 2px solid var(--rule); padding: 14px 0 0; margin-bottom: 30px; }
+  section > h2:first-child { margin-bottom: 14px; }
+  .main-nav { border-bottom: 2px solid var(--rule); gap: 0; margin-bottom: 26px; }
+  .main-nav a { color: var(--text); text-decoration: none; text-transform: uppercase; letter-spacing: .08em; font-size: 12.5px; font-weight: 700;
+    padding: 12px 18px 10px 0; margin-right: 18px; border-bottom: 5px solid transparent; margin-bottom: -2px; }
+  .main-nav a:hover { background: none; border-bottom-color: var(--border); }
+  .main-nav a[aria-current="page"] { color: var(--text); border-bottom-color: var(--rule); }
+  .jump a { border: 1px solid var(--rule); background: transparent; text-decoration: none; text-transform: uppercase; letter-spacing: .06em; font-size: 11.5px; font-weight: 600; }
+  .jump a:hover { background: var(--text); color: var(--bg); }
+  .kpis, .ov-grid { gap: 0; border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+  .kpi, .ov-card { background: transparent; border: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .kpi .label, .ov-card h3 { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; font-weight: 700; color: var(--text); }
+  .ov-card h3 a { text-decoration: none; }
+  .ov-card h3 a:hover { color: var(--text); text-decoration: underline; }
+  .kpi .value { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+  .ov-card .ov-value { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+  th { text-transform: uppercase; letter-spacing: .05em; font-size: 11px; color: var(--text); font-weight: 700; border-bottom: 2px solid var(--rule); }
+  .count { background: transparent; border: 1px solid var(--rule); color: var(--text); }
+  .count.bad { background: var(--text); color: var(--bg); }
+  .count.good { background: transparent; color: var(--text); }
+  .badge { border: 1px solid var(--rule); }
+  .badge.deleted, .badge.removed { background: var(--text); color: var(--bg); }
+  .badge.moved_out { background: var(--surface-2); color: var(--text); }
+  .badge.added { background: transparent; color: var(--text); }
+  .chip { background: transparent; border: 1px solid var(--border); }
+  .chip.minus { background: transparent; text-decoration: line-through; }
+  .chip.plus { background: var(--accent-soft); }
+  .card { border: 1px solid var(--rule); }
+  .btn, select, input[type=search], .dl-panel input[type=date] { border: 1px solid var(--rule); }
+  .btn { text-transform: uppercase; letter-spacing: .06em; font-size: 12px; font-weight: 600; padding: 7px 14px; }
+  .btn:hover { background: var(--text); color: var(--bg); }
+  .btn.primary:hover { filter: none; background: var(--muted); border-color: var(--muted); }
+  .seg { border: 1px solid var(--rule); }
+  .seg button { color: var(--text); }
+  .seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+  .tabs { border-bottom: 1px solid var(--rule); }
+  .tabs button { color: var(--text); text-transform: uppercase; letter-spacing: .06em; font-size: 12px; font-weight: 600; }
+  .tabs button[aria-selected="true"] { color: var(--text); border-bottom: 4px solid var(--rule); }
+  .alert { background: var(--bg); border: 2px solid var(--rule); border-left-width: 2px; padding: 0 18px 14px; }
+  .alert h2 { display: inline-block; background: var(--text); color: var(--bg); font-size: 13px; padding: 5px 10px; margin: 0 0 10px -18px; }
+  .alert .group-title { color: var(--text); font-weight: 800; }
+  .all-clear { background: transparent; border: 1px solid var(--rule); color: var(--text); }
+  section.removal { border-left: 0; border-top: 6px solid var(--rule); }
+  section.removal > h2 { color: var(--text); }
+  .cause.bad { color: var(--text); font-weight: 800; text-decoration: underline; text-decoration-thickness: 2px; }
+  .status, .mini, .dl-panel, .crawl-schedule, .sb-info, .notice { background: var(--surface-2); border-left: 4px solid var(--rule); }
+  .status.failed, .mini.failed { background: var(--text); color: var(--bg); }
+  .status.failed .small, .mini.failed .small { color: var(--bg); }
+  .pulse { background: var(--text); }
+  .dendro, .map { border: 1px solid var(--rule); }
+  .growth .grid line, .growth .axis line, .growth .axis path, .ov-chart .axis line, .ov-chart .axis path { stroke: var(--border); }
+  @media (max-width: 520px) { h1 { font-size: 26px; } .page-title { font-size: 26px; } .kpi .value { font-size: 26px; } }
 </style>
 </head>
 <body>
@@ -1701,7 +1770,7 @@ function setupTabs(snap) {
 }
 
 // ---- Overview: how the project has grown, as small cumulative charts. Each links to its page.
-const OV_COLORS = {files: "var(--accent)", requests: "#2d5a8c", uploaders: "#8a5a00", assessed: "#7a4e9c", size: "#3d7f86", usage: "#a33a2b"};
+const OV_COLORS = {files: "var(--text)", requests: "var(--chart-2)", uploaders: "var(--text)", assessed: "var(--chart-2)", size: "var(--text)", usage: "var(--chart-2)"};
 function overviewSeries() {
   const out = [];
   const month = (m) => new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7) - 1, 1));
@@ -2407,10 +2476,11 @@ function renderSunburst(snap) {
     root.each(d => d.current = d);
     const tops = root.children || [];
     // Distinct hues in size order, so the biggest neighbouring branches never look alike.
-    const PALETTE = ["#4e79a7", "#f28e2b", "#59a14f", "#e15759", "#76b7b2", "#edc948", "#b07aa1", "#ff9da7",
-      "#9c755f", "#86bcb6", "#d4a6c8", "#a0cbe8", "#ffbe7d", "#8cd17d", "#f1ce63", "#bab0ac"];
+    // Greys, light enough for black labels, alternating so neighbouring branches stay apart.
+    const PALETTE = ["#6e6e6e", "#a8a8a8", "#828282", "#bdbdbd", "#969696", "#cfcfcf", "#787878", "#b3b3b3",
+      "#8c8c8c", "#c4c4c4", "#7d7d7d", "#aeaeae", "#919191", "#c9c9c9", "#737373", "#b8b8b8"];
     const color = d3.scaleOrdinal(tops.map(d => d.data.id), PALETTE);
-    const OWN_COLOR = "#c9c4b8";
+    const OWN_COLOR = "#e3e3e3";
     const branchColor = (d) => {
       if (d.data.own) return OWN_COLOR;
       let top = d;
