@@ -283,8 +283,11 @@
 
   <!-- Overview: headline numbers, removals, and how the project has grown -->
   <div id="page-home">
-    <div id="alerts"></div>
     <div id="miniStatus" aria-live="polite"></div>
+    <section>
+      <h2>Key figures</h2>
+      <div class="kpis" id="kpis"></div>
+    </section>
     <section>
       <h2>How the project has grown</h2>
       <p class="sub" style="margin:-6px 0 12px">Cumulative totals over time. Hover a chart for a month's figure; click its title
@@ -292,10 +295,7 @@
       <div class="ov-grid" id="overview"></div>
       <div hidden><span id="ncViews"></span><span id="ncContrib"></span><span id="ncUsage"></span></div>
     </section>
-    <section>
-      <h2>Key figures</h2>
-      <div class="kpis" id="kpis"></div>
-    </section>
+    <div id="alerts"></div>
     <section class="latest">
       <h2>Latest</h2>
       <ul class="latest-list">
@@ -1781,7 +1781,9 @@ function smallChart(el, readout, c) {
   const color = OV_COLORS[c.key] || "var(--accent)";
   const fmtY = c.fmtY || ((v) => v >= 1e9 ? (v / 1e9) + "B" : v >= 1e6 ? (v / 1e6) + "M" : v >= 1e3 ? (v / 1e3) + "k" : v);
   svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.bottom})`)
-    .call(d3.axisBottom(x).ticks(Math.min(5, Math.max(2, Math.round(W / 90)))).tickSizeOuter(0));
+    .call(d3.axisBottom(x).ticks(Math.min(5, Math.max(2, Math.round(W / 90)))).tickSizeOuter(0)
+      .tickFormat(c.level ? d3.utcFormat("%-d %b") : null)
+      .tickValues(c.level ? [0, 1, 2, 3].map(i => pts[Math.round(i * (pts.length - 1) / 3)].date) : null));
   svg.append("g").attr("class", "axis").attr("transform", `translate(${m.left},0)`)
     .call(d3.axisLeft(y).ticks(3).tickFormat(fmtY).tickSize(-(W - m.left - m.right))).call(g => g.select(".domain").remove())
     .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0.5));

@@ -3,6 +3,12 @@
 Every version of the tracker's code (tool version) and of what it counts (method version). Each entry says which
 figures a change affects. Versions are recorded in every data file's metadata, every run record and every report.
 
+## Tool 2.3.1 · Method M2 · 2026-11-09
+
+- **Overview order:** key figures first, then the growth charts, then the Removed box, then Latest.
+- The "Uses on other wikis" chart shows four plain dates ("25 Oct", "30 Oct", ...) instead of crowded,
+  overlapping labels.
+
 ## Tool 2.3.0 · Method M2 · 2026-11-09
 
 **The dashboard is reorganised** from 8 pages into 5, reached from a tab bar at the top:

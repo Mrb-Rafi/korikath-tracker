@@ -64,11 +64,9 @@ The dashboard has five pages, reached from the tab bar at the top: **Overview**,
 **Uploaders** and **Activity**. The browser's Back button works between them, and each section has its own address
 (`#/activity/crawls`, `#/reach/file-requests`, ...).
 
-- **Overview** (`#/`): how the project is doing at a glance.
-  - **Removed:** a red box listing everything taken away in the latest crawl and usage check. This covers files
-    that left the project tree (deleted or moved outside), categories removed from the tree, and file uses removed
-    from wikis, each with its cause and who made it, and links to act on it. A green line shows instead when
-    nothing was removed. While a crawl runs, a line here shows its progress and time left.
+- **Overview** (`#/`): how the project is doing at a glance. While a crawl runs, a line at the top shows its
+  progress and time left. Then, in this order:
+  - **Key figures:** the latest crawl's statistics.
   - **How the project has grown:** cumulative charts, each linking to its page:
     - files in the project
     - file requests
@@ -78,7 +76,10 @@ The dashboard has five pages, reached from the tab bar at the top: **Overview**,
     - uses on other wikis (since tracking began)
 
     Hover a chart for a month's figure.
-  - **Key figures:** the latest crawl's statistics.
+  - **Removed:** a red box listing everything taken away in the latest crawl and usage check. This covers files
+    that left the project tree (deleted or moved outside), categories removed from the tree, and file uses removed
+    from wikis, each with its cause and who made it, and links to act on it. A green line shows instead when
+    nothing was removed.
   - **Latest:** a line each on the latest changes, the crawls and places & devices.
 - **Collection** (`#/collection`): what is in the project.
   - **Korikath media over time:** how many of today's files had been uploaded by each date. It switches to uploads
