@@ -3,6 +3,21 @@
 Every version of the tracker's code (tool version) and of what it counts (method version). Each entry says which
 figures a change affects. Versions are recorded in every data file's metadata, every run record and every report.
 
+## Tool 2.3.0 · Method M2 · 2026-11-09
+
+**The dashboard is reorganised** from 8 pages into 5, reached from a tab bar at the top:
+
+| Page | What is on it |
+|---|---|
+| **Overview** | The Removed box, then cumulative charts (files, file requests, uploaders, quality / featured / valued, collection size, uses on other wikis), each linking to its page; key figures; latest changes |
+| **Collection** | Media over time, category tree, map, devices and metadata |
+| **Reach** | On-wiki usage and file requests |
+| **Uploaders** | Uploaders, one uploader's page, files by uploader in a category |
+| **Activity** | Changes, the on-wiki usage change log, crawls and data status |
+
+Sections have their own addresses, e.g. `#/activity/crawls`, `#/reach/file-requests`, `#/uploaders/files?c=…&u=…`.
+Every chart and table is unchanged; only where it appears changed.
+
 ## Tool 2.2.2 · Method M2 · 2026-11-05
 
 - **Page addresses follow the new names:**

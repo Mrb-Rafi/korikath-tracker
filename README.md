@@ -60,78 +60,113 @@ how many files it covers. Making one takes
 5–15 seconds; it needs Microsoft Edge or Google Chrome (used in the background to print the PDF) and the dashboard
 opened with the shortcut.
 
-The dashboard has three pages (the browser's Back button works between them):
+The dashboard has five pages, reached from the tab bar at the top: **Overview**, **Collection**, **Reach**,
+**Uploaders** and **Activity**. The browser's Back button works between them, and each section has its own address
+(`#/activity/crawls`, `#/reach/file-requests`, ...).
 
-- **Overview** (home): a red **Removed** box listing everything taken away in the latest crawl and usage check
-  (files that left the project tree, deleted or moved outside; categories removed from the tree; file uses removed
-  from wikis), each with links to act on it, or a green line when nothing was removed. Then the statistics of the latest crawl (total files, categories, files removed/added/moved,
-  category changes), links to the other two pages, **Korikath media over time** (a chart of how many of today's
-  files had been uploaded by each date, or uploads per month), and **Explore Korikath Category Tree** with three tabs:
-  **Tree map** (zoomable sunburst), **Tree diagram** (expandable tree, the style of osintframework.com) and **List**
-  (searchable). A view is drawn the first time you open its tab, and the dashboard remembers the tab you used last.
-  While a crawl runs, a line here shows its progress and time left.
-- **Crawls**: **Start quick check** (about 3 min) and **Start full crawl** (about 13 min) buttons, live progress
-  with time left and the expected finish time, the **scheduled crawls** (next run and how the last one went), and
-  **Data status**: how current each kind of data is ("as of", UTC) and how many of the latest crawl's files it
-  covers, with the tool version, method version and code commit that built the dashboard. Then **Saved crawls**:
-  every crawl stored on this PC with its type, totals, changes, how long it took and its size.
-  A crawl runs in the background with no window, so you can close the page and it keeps going. When it's done the
-  page refreshes itself with the new results.
-- **On-wiki usage**: where Korikath files are used on other Wikimedia wikis (Wikipedias, Wikidata, Wikivoyage and
-  so on; Commons itself isn't counted). Totals (files used and their share of the project, pages, wikis), every usage
-  **added or removed** since the previous check with links, and percentage breakdowns: **wikis** using the most
-  files, the most used **categories**, the **uploaders** whose files are used most, and the most used **files**.
-  Switch between **All pages** and **Articles only** (main-namespace pages: articles, Wikidata items). The **Download usage changes** panel downloads
-  the change log (every usage added or removed, with date, file, wiki, page, uploader and links) for any date range
-  (From/To in UTC, or Last 7 days / Last 30 days / All time), named with the range and the time of download, e.g.
-  `korikath_usage_changes_2026-10-01_to_2026-10-26_downloaded_2026-10-26_1432.csv`; the red Removed box links to it.
-  **Download current usage** gives every current use (`usage_current.csv`). Both open in Excel with Bengali text shown correctly.
-- **Uploaders**: the accounts that uploaded the files now in Korikath (each file's original uploader, who may not
-  be its author or photographer). Totals (uploaders, new and active in the last 30 days, the top 10's share of files, the median per person), a chart
-  of contributors over time (total, active per month, new per month), how many people uploaded 1 file, 2–10, and so
-  on, and a sortable, searchable table of everyone (files, share, first and latest upload, active months, files used
-  on other wikis, categories). Pick a contributor (search box, or click a name) to see the member's monthly uploads chart,
-  files by category, and on-wiki usage; each contributor has a shareable link
-  (`#/uploaders?u=Name`). The category breakdown leaves out the catch-all categories (any category directly
-  holding more than a quarter of all files: All images, Uploaded via Campaign, Unreviewed). These statistics come
-  from the cached uploaders and upload dates, so they need no extra requests to Commons.
-- **Files by uploader in a category** (the "Files by uploader in a category" link): choose any category of the
-  tree (suggestions as you type) and type an uploader's user name to get the list of files that person uploaded
-  there (each file's original uploader) and the total, with **Include subcategories** on (the default) or off (only
-  files placed directly in the category). The list is sortable, has previews, and **Download list (CSV)** saves it.
-  Leave the name empty to see everyone who uploaded to the category with their counts; click a name there to list
-  their files. Names match without regard to case or underscores ("mrb_rafi" finds "Mrb Rafi"). Each lookup has a
-  shareable link (`#/uploader-files?c=Category&u=Name`). It's worked out from the latest crawl and the cached uploaders,
-  so it makes no requests to Commons, and it needs the dashboard opened with the shortcut.
-- **File requests** (formerly "Views"): how often Korikath files are loaded (in articles, on Commons, elsewhere;
-  thumbnails included), from Wikimedia's media request statistics, which start in January 2015: all file requests
-  and those not flagged as automated (requests Wikimedia doesn't classify as bots or crawlers; a request is not
-  the same as a person looking), monthly and daily charts, and the most requested files, categories and
-  uploaders (also a File requests column on the Uploaders page). A separate daily job (11:00 AM, its own lock so it
-  never blocks a crawl) first collects each file's monthly history (one time, ~24 hours for all files, saved as it
-  goes), then each day brings a thirtieth of the files up to date with daily figures, so every file is updated once
-  a month. **All view totals run to one common cutoff**: complete months, from January 2015 to the last month every
-  file has been counted through (shown with every total, e.g. "Jan 2015 – Sep 2026"); what has been counted after it
-  is partial and left out until every file has caught up. It makes one request at a time and never more than
-  180 a minute (Wikimedia allows identified tools 200). Data in `views.json.gz`. While it runs, the File requests page shows
-  live progress and time left (from `views_status.js`); the figures are rebuilt every 500 files and a "Refresh"
-  prompt appears when newer ones are ready.
-- **Map, devices & metadata**: how many files are **geocoded** (have a camera location on their Commons page), how many have
-  a GPS position in their own metadata but no location on Commons yet, and an interactive **map** of the geocoded
-  files (pins cluster when zoomed out; click one for the photo; map © OpenStreetMap contributors). Below it the
-  **devices** the photos were taken with, from each file's metadata: by type (camera, phone, drone, ...), by brand
-  and by model, with how many files and contributors each. A file's camera metadata is fetched once; its location is
-  re-checked over a 30-day cycle (a thirtieth of the files with each daily crawl), since one can be added any time.
-  **From shot to upload**: how long after a photo was taken (the date its camera recorded) it was uploaded: the
-  typical wait, how many waited a day, a week, a month, a year or longer, the typical wait by upload year, the
-  longest waits and the oldest photo; photos whose camera clock was clearly wrong are counted apart. **Collection
-  size**: the total size of the collection (current version of each file), by kind of file, the largest files, and
-  its growth over time (also a view of the home page's chart). Contributors get a "Median days to upload" column.
-- **Changes** (the "Explore changes" link): everything that changed with a crawl, removals first: files removed,
-  category changes, file uses removed from wikis, files moved, renamed and added, and file uses added. The file-usage
-  changes are those found by the usage check that ran after the crawl. The other changes in detail: files removed (with thumbnails, marked Deleted or Moved
-  outside), category changes, files moved inside the tree, renamed files and files added. Pick an earlier crawl
-  from the list to see its changes.
+- **Overview** (`#/`): how the project is doing at a glance.
+  - **Removed:** a red box listing everything taken away in the latest crawl and usage check. This covers files
+    that left the project tree (deleted or moved outside), categories removed from the tree, and file uses removed
+    from wikis, each with its cause and who made it, and links to act on it. A green line shows instead when
+    nothing was removed. While a crawl runs, a line here shows its progress and time left.
+  - **How the project has grown:** cumulative charts, each linking to its page:
+    - files in the project
+    - file requests
+    - uploaders
+    - quality, featured and valued images
+    - collection size
+    - uses on other wikis (since tracking began)
+
+    Hover a chart for a month's figure.
+  - **Key figures:** the latest crawl's statistics.
+  - **Latest:** a line each on the latest changes, the crawls and places & devices.
+- **Collection** (`#/collection`): what is in the project.
+  - **Korikath media over time:** how many of today's files had been uploaded by each date. It switches to uploads
+    per month, to quality, featured and valued images, or to collection size.
+  - **Explore Korikath Category Tree**, with three tabs:
+    - **Tree map:** a zoomable sunburst.
+    - **Tree diagram:** an expandable tree, in the style of osintframework.com.
+    - **List:** searchable.
+
+    The dashboard remembers the tab you used last.
+  - **Map, devices & metadata:**
+    - **Geocoded files:** how many files have a camera location on their Commons page, and how many have a GPS
+      position in their own metadata but no location on Commons yet.
+    - **Map:** an interactive map of the geocoded files. Pins cluster when zoomed out; click one for the photo. Map
+      © OpenStreetMap contributors.
+    - **Devices:** the devices the photos were taken with, from each file's metadata, by type (camera, phone,
+      drone, ...), brand and model.
+    - **From shot to upload:** how long after a photo was taken it was uploaded. Photos whose camera clock was
+      clearly wrong are counted apart.
+    - **Collection size:** by kind of file, plus the largest files.
+
+    A file's camera metadata is fetched once. Its location and current size are re-checked over a 30-day cycle.
+- **Reach** (`#/reach`): where the files are used and how often they are requested.
+  - **On-wiki usage:** where Korikath files are used on other Wikimedia wikis (Wikipedias, Wikidata, Wikivoyage and
+    so on; Commons itself isn't counted).
+    - Totals: files used and their share of the project, pages, wikis.
+    - Breakdowns: the wikis using the most files, the most used categories, the uploaders whose files are used
+      most, the most used files, and main-page features.
+    - The history of usage checks.
+    - Switch between **All pages** and **Articles only** (main-namespace pages: articles, Wikidata items).
+    - **Download current usage** saves every current use (`usage_current.csv`).
+  - **File requests:** how often Korikath files are loaded (in articles, on Commons, elsewhere; thumbnails
+    included), from Wikimedia's media request statistics, which start in January 2015.
+    - All file requests, and those not flagged as automated (requests Wikimedia doesn't classify as bots or
+      crawlers; a request is not the same as a person looking).
+    - Monthly and daily charts, and the most requested files, categories and uploaders.
+    - **All totals run to one common cutoff:** complete months, from January 2015 to the last month every file has
+      been counted through, shown with every total (e.g. "Jan 2015 – Sep 2026"). What has been counted after it is
+      partial and left out until every file has caught up.
+    - **The daily job** runs at 11:00 AM, with its own lock so it never blocks a crawl. It first collected each
+      file's monthly history once, then brings a thirtieth of the files up to date each day. It makes one request
+      at a time, never more than 180 a minute (Wikimedia allows identified tools 200). Data is in `views.json.gz`.
+    - While the job runs, this section shows live progress (from `views_status.js`), and a "Refresh" prompt
+      appears when newer figures are ready.
+- **Uploaders** (`#/uploaders`): the accounts that uploaded the files now in Korikath (each file's original
+  uploader, who may not be its author or photographer).
+  - Totals: uploaders, new and active in the last 30 days, the top 10's share of files, the median per uploader.
+  - A chart of uploaders over time (total, active per month, new per month), and how many people uploaded 1 file,
+    2–10, and so on.
+  - A sortable, searchable table of everyone, with file requests and median days to upload.
+  - **One uploader:** pick one (search box, or click a name) to see their monthly uploads chart, files by category,
+    on-wiki usage, and **Download this member's PDF report**. Each has a shareable link (`#/uploaders?u=Name`). The
+    category breakdown leaves out the catch-all categories (any category directly holding more than a quarter of
+    all files: All images, Uploaded via Campaign, Unreviewed).
+  - **Files by uploader in a category** (`#/uploaders/files?c=Category&u=Name`):
+    - Choose a category and type a user name to list the files that person uploaded there, with the total.
+      **Include subcategories** is on by default.
+    - The list is sortable and has previews; **Download list (CSV)** saves it.
+    - Leave the name empty to see everyone who uploaded to the category.
+    - It needs the dashboard opened with the shortcut.
+
+  These statistics come from the cached uploaders and upload dates, so they need no extra requests to Commons.
+- **Activity** (`#/activity`): what changed, and the crawls that keep the data up to date.
+  - **Changes:** everything that changed with a crawl, removals first:
+    - files removed (marked Deleted or Moved outside)
+    - category changes
+    - file uses removed from wikis
+    - files moved, renamed and added
+    - new assessments
+    - file uses added
+
+    Each comes with who made it and a diff or log link. Pick an earlier crawl from the list to see its changes.
+    **Download removed files** saves any date range.
+  - **On-wiki usage changes:** the log of every use added or removed, with who made it.
+    - **Download usage changes** saves any date range (From/To in UTC, or Last 7 days / Last 30 days / All time),
+      e.g. `korikath_usage_changes_2026-10-01_to_2026-10-26_downloaded_2026-10-26_1432Z.csv`. It opens in Excel
+      with Bengali text shown correctly.
+    - The red Removed box links to it.
+  - **Crawls:**
+    - **Start quick check** (about 3 min), **Start full crawl** (about 13 min) and **Check on-wiki usage**
+      (about 20 min), with live progress, time left and the expected finish time.
+    - The **scheduled crawls** (next run and how the last one went).
+    - **Data status:** how current each kind of data is and how many files it covers, with the tool version,
+      method version and code commit that built the dashboard.
+    - **Saved crawls:** every crawl stored on this PC.
+
+    A crawl runs in the background with no window, so you can close the page and it keeps going. When it's done,
+    the page refreshes itself.
 
 How the buttons work: a page opened straight from disk can't start programs, so the shortcut starts a small local
 server (`server.py`, no window) and opens the dashboard through it at <http://127.0.0.1:8777/>. Only this PC can

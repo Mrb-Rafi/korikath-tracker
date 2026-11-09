@@ -114,6 +114,28 @@ class WordingTests(unittest.TestCase):
         self.assertIn("OpenStreetMap contributors", text)
 
 
+class DashboardStructureTests(unittest.TestCase):
+    def test_five_pages_and_every_link_leads_somewhere(self):
+        text = (BASE / "dashboard_template.html").read_text(encoding="utf-8")
+        pages = re.findall(r'<div id="page-([a-z]+)"', text)
+        self.assertEqual(pages, ["home", "collection", "reach", "uploaders", "activity"])
+        sections = {"collection": {"growth", "tree", "map"}, "reach": {"usage", "file-requests"},
+                    "uploaders": {"files"}, "activity": {"changes", "usage-changes", "crawls"}}
+        for page, parts in sections.items():
+            for part in parts:
+                self.assertTrue(re.search(rf'"?{re.escape(part)}"?: "sec-', text), f"no section {page}/{part} in the router")
+        for link in set(re.findall(r'#/([a-z-]*)(?:/([a-z-]+))?', text)):
+            page, part = link
+            if not page:
+                continue
+            self.assertIn(page, sections, f"link to unknown page #/{page}")
+            if part:
+                self.assertIn(part, sections[page], f"link to unknown section #/{page}/{part}")
+        for sid in ("sec-growth", "sec-tree", "sec-map", "sec-usage", "sec-requests", "sec-files", "sec-changes",
+                    "sec-usage-changes", "sec-crawls"):
+            self.assertTrue(f'id="{sid}"' in text, f"no element {sid}")
+
+
 class CreditTests(unittest.TestCase):
     def fake(self, metadata):
         class API:
