@@ -101,7 +101,7 @@ class WordingTests(unittest.TestCase):
 
     def test_neutral_labels(self):
         text = (BASE / "report.py").read_text(encoding="utf-8")
-        for old in ('"Views"', "by people", "By people", '"Contributors"', "All-time views", "Most viewed"):
+        for old in ('"Views"', "by people", "By people", '"Contributors"', "All-time views", "Most viewed", "views counted"):
             self.assertFalse(old in text, f"report still says {old!r}")
 
     def test_dashboard_uses_the_same_wording(self):

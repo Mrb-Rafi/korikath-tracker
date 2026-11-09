@@ -3,6 +3,18 @@
 Every version of the tracker's code (tool version) and of what it counts (method version). Each entry says which
 figures a change affects. Versions are recorded in every data file's metadata, every run record and every report.
 
+## Tool 2.4.1 · Method M2 · 2026-11-09
+
+- **The PDF reports use Swiss Mono too**, matching the dashboard:
+  - **Type and layout:** Archivo type with uppercase headings and labels, black rules, ruled grids of key figures,
+    and no rounded corners.
+  - **Status and checks:** FINAL is a solid black badge and PROVISIONAL an outlined one. Failed checks are inverted
+    black, and checks not run are struck through.
+  - **Charts:** black and grey.
+
+  Photographs stay in colour.
+- Wording: "file requests counted after that" (it said "views"). The wording test now catches that phrase.
+
 ## Tool 2.4.0 · Method M2 · 2026-11-09
 
 **The dashboard has a new look: Swiss Mono.**

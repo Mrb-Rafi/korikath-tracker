@@ -16,7 +16,7 @@ from pathlib import Path
 
 import methodology
 
-TOOL_VERSION = "2.4.0"
+TOOL_VERSION = "2.4.1"
 BASE = Path(__file__).resolve().parent
 
 # Format version of each data file (bumped when its structure changes).

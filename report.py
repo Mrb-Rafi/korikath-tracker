@@ -41,7 +41,7 @@ from tracker import UTC, fmt_time  # noqa: E402
 
 OUT_DIR = Path.home() / "Downloads"  # where the command line saves reports; the dashboard sends them straight to the browser
 NO_WINDOW = 0x08000000
-ACCENT, HUMAN, MUTED = "#2f6b4f", "#7fb397", "#8a867d"
+ACCENT, HUMAN, MUTED = "#000000", "#5c5c5c", "#bdbdbd"  # Swiss Mono: black, dark grey, light grey
 KIND_NAMES = {"qi": "Quality images", "fp": "Featured pictures", "vi": "Valued images", "fm": "Featured media",
               "potd": "Picture of the Day on Commons", "motd": "Media of the Day on Commons"}
 SPECIAL_WIKIS = {"commons.wikimedia.org": "Wikimedia Commons", "meta.wikimedia.org": "Meta-Wiki",
@@ -227,7 +227,7 @@ def chart(series, kind="bars", height=170, width=720, colors=(ACCENT,), legend=N
     parts = [f'<svg class="chart" viewBox="0 0 {width} {height}" width="100%" role="img">']
     v = 0
     while v <= ymax + 1e-9:
-        parts.append(f'<line x1="{left}" x2="{width - right}" y1="{y(v):.1f}" y2="{y(v):.1f}" stroke="#e2dfd6"/>'
+        parts.append(f'<line x1="{left}" x2="{width - right}" y1="{y(v):.1f}" y2="{y(v):.1f}" stroke="#e0e0e0"/>'
                      f'<text x="{left - 6}" y="{y(v) + 4:.1f}" text-anchor="end">{axis_label(v)}</text>')
         v += step
     years = sorted({m[:4] for m in months})
@@ -236,7 +236,7 @@ def chart(series, kind="bars", height=170, width=720, colors=(ACCENT,), legend=N
         # Label each January (and the first month, unless a January follows too closely to fit both).
         if m.endswith("-01") or (i == 0 and not any(x.endswith("-01") for x in months[1:max(2, len(months) // 15)])):
             if (int(m[:4]) - int(years[0])) % every == 0:
-                parts.append(f'<line x1="{x(i):.1f}" x2="{x(i):.1f}" y1="{top + h}" y2="{top + h + 4}" stroke="#8a867d"/>'
+                parts.append(f'<line x1="{x(i):.1f}" x2="{x(i):.1f}" y1="{top + h}" y2="{top + h + 4}" stroke="#000000"/>'
                              f'<text x="{x(i) + 2:.1f}" y="{height - 6}">{m[:4]}</text>')
     if kind == "bars":
         bw = max(w / len(rows) - (1 if len(rows) < 120 else 0.3), 0.6)
@@ -250,7 +250,7 @@ def chart(series, kind="bars", height=170, width=720, colors=(ACCENT,), legend=N
         parts.append(f'<polygon points="{left},{top + h} {left},{y(rows[0][1]):.1f} {pts} {x(len(rows)):.1f},{top + h}" '
                      f'fill="{colors[0]}" fill-opacity="0.18"/>'
                      f'<polyline points="{left},{y(rows[0][1]):.1f} {pts}" fill="none" stroke="{colors[0]}" stroke-width="2"/>')
-    parts.append(f'<line x1="{left}" x2="{width - right}" y1="{top + h}" y2="{top + h}" stroke="#8a867d"/></svg>')
+    parts.append(f'<line x1="{left}" x2="{width - right}" y1="{top + h}" y2="{top + h}" stroke="#000000"/></svg>')
     if legend:
         parts.append('<div class="legend">' + "".join(
             f'<span><i style="background:{c}"></i>{esc(t)}</span>' for c, t in zip(colors, legend)) + "</div>")
@@ -316,68 +316,75 @@ def thumbs(titles):
     return f'<div class="thumbs">{"".join(cells)}</div>'
 
 
+FONT_LINK = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap">'
 CSS = """
 @page { size: A4; margin: 16mm 14mm 18mm;
-  @bottom-left { content: "Project Korikath statistics"; font: 8pt 'Segoe UI', 'Nirmala UI', sans-serif; color: #8a867d; }
-  @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt 'Segoe UI', sans-serif; color: #8a867d; } }
-* { box-sizing: border-box; }
-body { margin: 0; color: #1d1c1a; font: 9.5pt/1.45 'Segoe UI', 'Nirmala UI', 'Noto Sans Bengali', sans-serif;
+  @bottom-left { content: "Project Korikath statistics"; font: 600 7.5pt 'Archivo', 'Helvetica Neue', Arial, sans-serif; color: #000000; text-transform: uppercase; letter-spacing: .06em; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 7.5pt 'Archivo', 'Helvetica Neue', Arial, sans-serif; color: #000000; } }
+* { box-sizing: border-box; border-radius: 0 !important; }
+body { margin: 0; color: #000000; font: 9.5pt/1.45 'Archivo', 'Helvetica Neue', Arial, 'Nirmala UI', 'Noto Sans Bengali', sans-serif;
   -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-a { color: #2d5a8c; text-decoration: none; }
-header { border-bottom: 3px solid #2f6b4f; padding-bottom: 10px; margin-bottom: 14px; }
-header .kicker { color: #2f6b4f; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: 8.5pt; }
-h1 { font-size: 22pt; margin: 2px 0 6px; line-height: 1.15; }
+a { color: #000000; text-decoration: underline; text-decoration-thickness: .5pt; text-underline-offset: 1.5pt; }
+header { border-bottom: 3pt solid #000000; padding-bottom: 10px; margin-bottom: 14px; }
+header .kicker { color: #000000; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 7.5pt; }
+h1 { font-size: 26pt; font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em; margin: 4px 0 10px; line-height: 1; }
 h2, h3 { break-after: avoid; }
-h2 { font-size: 13pt; margin: 0 0 6px; color: #2f6b4f; border-bottom: 1px solid #e2dfd6; padding-bottom: 3px; }
-h3 { font-size: 10.5pt; margin: 12px 0 4px; }
-.meta { display: grid; grid-template-columns: max-content 1fr; gap: 1px 12px; font-size: 9pt; }
-.meta b { color: #6b675f; font-weight: 600; }
-section { margin: 16px 0 0; }
+h2 { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; margin: 0 0 8px; color: #000000;
+  border-top: 2pt solid #000000; padding-top: 5px; }
+h3 { font-size: 9.5pt; font-weight: 700; margin: 12px 0 4px; }
+.meta { display: grid; grid-template-columns: max-content 1fr; gap: 1px 14px; font-size: 9pt; }
+.meta b { color: #000000; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 7.5pt; padding-top: 1.5pt; }
+section { margin: 18px 0 0; }
 section.break { break-before: page; }
-.intro, .sub { color: #6b675f; }
+.intro, .sub { color: #5c5c5c; }
 .intro { margin: 0 0 8px; }
 .sub { font-size: 8.5pt; margin: 4px 0; }
-.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 4px; }
-.kpi { border: 1px solid #e2dfd6; border-radius: 6px; padding: 6px 8px; background: #faf9f6; break-inside: avoid; }
-.kpi .label { color: #6b675f; font-size: 8pt; }
-.kpi .value { font-size: 14pt; font-weight: 650; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.kpi .note { color: #6b675f; font-size: 7.5pt; line-height: 1.3; margin-top: 2px; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 6px 0 4px; border-top: .75pt solid #000000; border-left: .75pt solid #000000; }
+.kpi { border-right: .75pt solid #000000; border-bottom: .75pt solid #000000; padding: 6px 8px; background: #ffffff; break-inside: avoid; }
+.kpi .label { color: #000000; font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.kpi .value { font-size: 16pt; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.kpi .note { color: #5c5c5c; font-size: 7pt; line-height: 1.3; margin-top: 2px; }
 table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin: 4px 0; }
 thead { display: table-header-group; }
 tr { break-inside: avoid; }
-th { text-align: left; color: #6b675f; font-weight: 600; border-bottom: 1.5px solid #cfcbc0; padding: 3px 5px; }
-td { border-bottom: 1px solid #eeebe4; padding: 2.5px 5px; vertical-align: top; overflow-wrap: break-word; }
+th { text-align: left; color: #000000; font-weight: 700; font-size: 7pt; text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 1.25pt solid #000000; padding: 3px 5px; }
+td { border-bottom: .5pt solid #d4d4d4; padding: 2.5px 5px; vertical-align: top; overflow-wrap: break-word; }
 .nw { white-space: nowrap; }
 .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .cols > div { min-width: 0; }
-svg.chart { display: block; margin: 4px 0; font: 7.5pt 'Segoe UI', sans-serif; fill: #6b675f; }
-.legend { font-size: 8pt; color: #6b675f; display: flex; gap: 14px; }
-.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+svg.chart { display: block; margin: 4px 0; font: 7pt 'Archivo', 'Helvetica Neue', Arial, sans-serif; fill: #5c5c5c; }
+.legend { font-size: 7.5pt; color: #000000; display: flex; gap: 14px; }
+.legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; border: .5pt solid #000000; }
 .chartbox { break-inside: avoid; }
 .thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 6px 0; }
 .thumbs figure { margin: 0; break-inside: avoid; }
-.thumbs img, .noimg { width: 100%; height: 95px; object-fit: cover; border-radius: 4px; background: #f0eee8; display: block; }
-.noimg { display: flex; align-items: center; justify-content: center; color: #8a867d; font-size: 8pt; }
-.thumbs figcaption { font-size: 7.5pt; color: #6b675f; line-height: 1.25; margin-top: 2px;
+.thumbs img, .noimg { width: 100%; height: 95px; object-fit: cover; background: #f0f0f0; display: block; }
+.noimg { display: flex; align-items: center; justify-content: center; color: #5c5c5c; font-size: 7.5pt; text-align: center; border: .5pt solid #bdbdbd; }
+.thumbs figcaption { font-size: 7pt; color: #000000; line-height: 1.25; margin-top: 3px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.removed { color: #a33a2b; }
-.pill { display: inline-block; font-size: 7.5pt; padding: 0 5px; border-radius: 8px; background: #e3efe8; color: #2f6b4f; }
-.badge { display: inline-block; font-weight: 700; padding: 0 7px; border-radius: 4px; letter-spacing: .04em; }
-.badge.final { background: #2f6b4f; color: #fff; }
-.badge.provisional { background: #a33a2b; color: #fff; }
-.reasons { border: 1.5px solid #a33a2b; background: #f7e4e0; border-radius: 6px; padding: 6px 10px; margin-top: 8px; font-size: 8.5pt; }
+.removed { color: #000000; }
+h3.removed { text-decoration: underline; text-decoration-thickness: 1.5pt; }
+.pill { display: inline-block; font-size: 7pt; padding: 0 5px; border: .5pt solid #000000; color: #000000; font-weight: 600; }
+.badge { display: inline-block; font-weight: 800; padding: 1px 8px; letter-spacing: .1em; text-transform: uppercase; font-size: 8pt; }
+.badge.final { background: #000000; color: #ffffff; }
+.badge.provisional { background: #ffffff; color: #000000; border: 1.25pt solid #000000; }
+.reasons { border: 1.5pt solid #000000; background: #ffffff; padding: 6px 10px; margin-top: 10px; font-size: 8.5pt; }
+.reasons > b { display: inline-block; background: #000000; color: #ffffff; padding: 1px 6px; margin: -6px 0 4px -10px; text-transform: uppercase; letter-spacing: .06em; font-size: 7.5pt; }
 .reasons ul { margin: 3px 0 0 16px; padding: 0; }
 .mono { font-family: Consolas, 'Courier New', monospace; font-size: 8pt; overflow-wrap: anywhere; }
-.src { color: #6b675f; font-size: 7.5pt; border-top: 1px dotted #cfcbc0; margin-top: 6px; padding-top: 3px; }
-.credit { display: block; font-size: 6.5pt; color: #8a867d; }
+.src { color: #5c5c5c; font-size: 7pt; border-top: .5pt solid #000000; margin-top: 6px; padding-top: 3px; }
+.src b { color: #000000; text-transform: uppercase; letter-spacing: .05em; font-size: 6.5pt; }
+.credit { display: block; font-size: 6.5pt; color: #5c5c5c; }
 .trust p { margin: 0 0 4px; }
 .trust h3 { margin: 8px 0 2px; }
-.res.passed { color: #2f6b4f; font-weight: 600; }
-.res.failed { color: #a33a2b; font-weight: 700; }
-.res.notrun { color: #8a5a00; }
+.res { text-transform: uppercase; letter-spacing: .05em; font-size: 7.5pt; }
+.res.passed { color: #000000; font-weight: 600; }
+.res.failed { background: #000000; color: #ffffff; font-weight: 800; padding: 0 4px; }
+.res.notrun { color: #5c5c5c; text-decoration: line-through; }
 .watermark { position: fixed; top: 42%; left: 0; right: 0; text-align: center; transform: rotate(-30deg);
-  font-size: 54pt; font-weight: 800; color: rgba(163, 58, 43, .10); letter-spacing: .08em; z-index: -1; }
+  font-size: 54pt; font-weight: 800; color: rgba(0, 0, 0, .07); letter-spacing: .08em; z-index: -1; }
 """
 
 
@@ -385,7 +392,7 @@ def page(title, kicker, meta_rows, body, manifest=None):
     if manifest is None:  # a page without an issued report (only used by tests)
         meta = "".join(f"<b>{esc(k)}</b><span>{v}</span>" for k, v in meta_rows)
         return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{esc(title)}</title>'
-                f"<style>{CSS}</style></head><body><header><div class=kicker>{esc(kicker)}</div><h1>{esc(title)}</h1>"
+                f"{FONT_LINK}<style>{CSS}</style></head><body><header><div class=kicker>{esc(kicker)}</div><h1>{esc(title)}</h1>"
                 f'<div class="meta">{meta}</div></header>{body}</body></html>')
     m = manifest
     css = CSS.replace('content: "Project Korikath statistics"', f'content: "{m["report_id"]} · {m["status"]}"')
@@ -393,7 +400,7 @@ def page(title, kicker, meta_rows, body, manifest=None):
     return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{esc(title)} · {esc(m["report_id"])}</title>'
             f'<meta name="author" content="{esc((m.get("issuer") or {}).get("name") or "Project Korikath")}">'
             f'<meta name="description" content="{esc(m["report_id"])} {esc(m["status"])} {esc(m["fingerprint"])}">'
-            f"<style>{css}</style></head><body>{mark}<header><div class=kicker>{esc(kicker)}</div><h1>{esc(title)}</h1>"
+            f"{FONT_LINK}<style>{css}</style></head><body>{mark}<header><div class=kicker>{esc(kicker)}</div><h1>{esc(title)}</h1>"
             f"{cover(m, meta_rows)}</header>{trust_section(m)}{checks_section(m)}"
             f"{body}{appendices(m, RENDER['data'])}</body></html>")
 
@@ -593,7 +600,7 @@ def project_report(D, generated, manifest=None):
                     [[link(t), fmt(n), fmt(a), fmt(h)] for t, a, h, n in V["categories"][:20]], num=(1, 2, 3)),
             f"How often each file itself was loaded (Wikimedia media requests). All figures cover {esc(views_period(V))}: complete "
             "months that every file has been counted through."
-            + (f" The {fmt(V['after_cutoff'][0])} views counted after that are partial and not included." if (V.get("after_cutoff") or [0])[0] else "")
+            + (f" The {fmt(V['after_cutoff'][0])} file requests counted after that are partial and not included." if (V.get("after_cutoff") or [0])[0] else "")
             + (f" Still collecting: {fmt(V['with_history'])} of {fmt(V['files'])} files counted so far." if partial else "")))
         body[-1] = body[-1].replace("<section>", '<section class="break">', 1)
 
