@@ -373,6 +373,8 @@ python user_files.py "Category"          everyone who uploaded to Category, with
 
 ## Settings (`config.json`)
 
+Copy `config.example.json` to `config.json` and fill in your own details. `config.json` is not version-controlled, because it holds contact details.
+
 | Key | Meaning |
 |---|---|
 | `root_category` | The mother category |
@@ -423,3 +425,7 @@ python user_files.py "Category"          everyone who uploaded to Category, with
 - `usage_log.csv`, `usage_current.csv`: usage change log and current usage (downloadable from the dashboard)
 - `snapshots/`, `reports/`, `history.json`: the saved crawls. Keep them; each crawl compares against the newest snapshot.
 - `run.bat`: same as the shortcut
+
+## Licence
+
+The code is released under the MIT License (see `LICENSE`). Reports the tracker produces are published under CC BY 4.0 by default, and images keep their own licences.
