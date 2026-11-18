@@ -3,7 +3,7 @@
   "max_depth": null,
   "exclude_categories": [],
   "max_categories": 5000,
-  "user_agent": "KorikathTracker/1.0 (https://commons.wikimedia.org/wiki/Commons:Project_Korikath)",
+  "user_agent": "Reoa/1.0 (https://commons.wikimedia.org/wiki/Commons:Project_Korikath)",
   "issuer": {
     "name": "Your name",
     "role": "Your role, Your project",

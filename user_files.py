@@ -1,7 +1,7 @@
 """The files one contributor uploaded to one category of the Korikath tree.
 
 Read from the latest saved crawl and the cached uploaders (uploads.json.gz), so no requests go to
-Commons. The uploader is each file's original uploader, as everywhere else in the tracker. The
+Commons. The uploader is each file's original uploader, as everywhere else in Reoa. The
 dashboard's "Files by contributor" page asks the local server (server.py) for this.
 
     python user_files.py "Category:Project Korikath-Bangladesh" "Wasiul Bahar"

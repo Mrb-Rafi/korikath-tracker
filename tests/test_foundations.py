@@ -1,6 +1,6 @@
 """Tests of the reliability foundations: UTC times, the methodology register, versions and data-file metadata.
 
-    python -m unittest discover -s tests       (from the tracker folder)
+    python -m unittest discover -s tests       (from the Reoa folder)
 """
 
 import re

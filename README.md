@@ -1,4 +1,8 @@
-# Project Korikath tracker
+# Reoa
+
+<img src="logo.svg" alt="Reoa" width="240">
+
+**The name.** Reoa is a Bangla word for a short yearly summary drawn from the ledger: income and spending, what is owed and what is due. Reoa keeps that kind of account for Project Korikath's media.
 
 Counts every file under [Category:Project Korikath](https://commons.wikimedia.org/wiki/Category:Project_Korikath)
 on Wikimedia Commons and reports what changed since the last crawl.
@@ -7,10 +11,10 @@ Requires Python 3.9+ and nothing else (standard library only).
 
 ## Open it
 
-Use the **Korikath Tracker** shortcut on the Desktop or in the Start menu (to pin it to the taskbar, right-click it in
+Use the **Reoa** shortcut on the Desktop or in the Start menu (to pin it to the taskbar, right-click it in
 the Start menu → *Pin to taskbar*). It opens the dashboard in your browser. Opening it doesn't start a crawl.
 
-**Issued reports: IDs, status, checks and verification.** Every PDF the tracker makes is *issued*:
+**Issued reports: IDs, status, checks and verification.** Every PDF Reoa makes is *issued*:
 
 - **ID and status.** It gets a report ID (e.g. `KRK-P-20261105-0815Z-352ffc6d`) and a status:
   - **FINAL** when every check passed
@@ -30,7 +34,7 @@ the Start menu → *Pin to taskbar*). It opens the dashboard in your browser. Op
 - **Commands:**
 
   ```
-  python report.py --verify FILE.pdf       was this PDF issued by the tracker? is it still current?
+  python report.py --verify FILE.pdf       was this PDF issued by Reoa? is it still current?
   python report.py --rebuild REPORT_ID     regenerate an issued report from its recorded data and code, and compare
   python report.py --register              list issued reports
   python report.py --supersede OLD_ID --by NEW_ID --reason "..."   record a correction (published/ERRATA.md)
@@ -54,7 +58,7 @@ files, devices, gaps and largest files. Each report states when it was generated
 its file name holds the generation time, e.g. `Korikath_statistics_report_2026-10-30_1729Z.pdf` or
 `Korikath_contributor_Wasiul_Bahar_2026-10-30_1729Z.pdf` (UTC). Reports go straight to your browser's downloads,
 and the archive records each PDF's fingerprint (SHA-256) with the exact data it was built from, so it can later tell
-whether a PDF was issued by the tracker (see **Archive** below); the PDF itself isn't kept. Every figure is computed
+whether a PDF was issued by Reoa (see **Archive** below); the PDF itself isn't kept. Every figure is computed
 afresh from the saved data, and the report opens with a **Data used** table: how current each kind of data is and
 how many files it covers. Making one takes
 5–15 seconds; it needs Microsoft Edge or Google Chrome (used in the background to print the PDF) and the dashboard
@@ -175,13 +179,13 @@ server (`server.py`, no window) and opens the dashboard through it at <http://12
 connect to it, and it closes itself after 30 minutes with no dashboard open. If you open `dashboard.html` directly
 from the folder, you can still read everything but the buttons and schedule are unavailable.
 
-While any tracker job runs (crawl, usage check, lookups, view counts), it asks Windows not to go to sleep; the
+While any Reoa job runs (crawl, usage check, lookups, view counts), it asks Windows not to go to sleep; the
 screen can still turn off, closing the lid or the power button still sleep the PC, and normal sleep returns when the
 job ends. A sleeping PC would otherwise stall the job until it wakes.
 
 **All times are UTC** (Coordinated Universal Time), everywhere: the dashboard ("23 Oct 2026, 16:28 UTC"), the CSV
 files ("2026-10-23 16:28 UTC"), the PDF reports and their file names, and the saved data. Days and months (uploads per
-month, "new in the last 30 days", ...) are UTC days and months. Until 5 Nov 2026 the tracker showed Bangladesh time
+month, "new in the last 30 days", ...) are UTC days and months. Until 5 Nov 2026 Reoa showed Bangladesh time
 (UTC+6); the change is described in `CHANGELOG.md`. The scheduled tasks still run at 9:00 and 11:00 by the PC's own
 clock, since that is how Windows schedules them; the dashboard shows their times in UTC.
 
@@ -190,7 +194,7 @@ clock, since that is how Windows schedules them; the dashboard shows their times
 These make every figure traceable and checkable (see `RELIABILITY_PLAN.md` for the full plan and its status):
 
 - **Versions.** `version.py` holds the tool version (now 2.0.0). `methodology.py` holds the method version (now M1):
-  what is counted and how. Every rule and threshold the tracker counts by is in `methodology.py`. That covers what
+  what is counted and how. Every rule and threshold Reoa counts by is in `methodology.py`. That covers what
   counts as a project file, a use, a view or a wrong camera clock, the brand list, the assessment categories, and
   the definitions (D01–D18) and known limitations (L01–L17) that the reports print. Changing any of them is a new
   method version; `python methodology.py --check` fails until the version is bumped and recorded. Every change is
@@ -218,7 +222,7 @@ These make every figure traceable and checkable (see `RELIABILITY_PLAN.md` for t
 ## Archive
 
 Most data files (usage, views, assessments, locations, camera data, upload dates, ...) are overwritten by each job.
-So that every number the tracker has ever shown can be traced back to the exact data it came from, every job
+So that every number Reoa has ever shown can be traced back to the exact data it came from, every job
 (scheduled or started by a button: crawls, usage checks, the views job, lookups) and every PDF report ends by
 recording the **state** of all data files, crawl snapshots, crawl reports, CSV files, logs and the code in
 `archive\`. Each distinct file content is stored once, named by its SHA-256 fingerprint, so a file that hasn't
@@ -234,7 +238,7 @@ still completes and its log shows a warning.
 python archive.py list                    every recorded state: when, which job, how much space it added
 python archive.py verify                  check the whole archive (chain, states, every stored file)
 python archive.py restore 12 D:\restored  rebuild the data files of state 12 (or "latest") in an empty folder
-python archive.py find report.pdf         was this PDF made by the tracker, and from which data?
+python archive.py find report.pdf         was this PDF made by Reoa, and from which data?
 python archive.py snapshot --note "..."   record the current state by hand
 ```
 
@@ -244,9 +248,9 @@ Two Windows scheduled tasks run in the background (no window):
 
 | Task | When | What |
 |---|---|---|
-| Korikath Tracker (weekly full crawl) | Every Monday, 9:00 AM | Full crawl, then on-wiki usage check |
-| Korikath Tracker (daily quick check) | Every other day, 9:00 AM | Quick check, then on-wiki usage check |
-| Korikath Tracker (daily views) | Every day, 11:00 AM | View counts (1/30 of the files a day) |
+| Reoa (weekly full crawl) | Every Monday, 9:00 AM | Full crawl, then on-wiki usage check |
+| Reoa (daily quick check) | Every other day, 9:00 AM | Quick check, then on-wiki usage check |
+| Reoa (daily views) | Every day, 11:00 AM | View counts (1/30 of the files a day) |
 
 The usage check asks Commons where each file is used (50 files per request, about 1,950 requests, roughly 20
 minutes). Commons has no feed of usage changes, so every check looks at every file. The **Check on-wiki usage**
@@ -315,15 +319,15 @@ The first crawl only records a baseline. Changes appear from the second crawl on
 
 ## Who made each change
 
-For every change, the tracker looks up the user who made it and links to the edit (a diff) or to the log entry. The
+For every change, Reoa looks up the user who made it and links to the edit (a diff) or to the log entry. The
 Changes page, the On-wiki usage page and the red Removed box show this. So do the PDF report, the usage-change and
 removed-files downloads, and `usage_log.csv` (columns `changed_by`, `changed_at_utc`, `how`, `edit_link`).
 
-- **Files and categories (on Commons).** The tracker reads the edits made to the file's or category's page between
+- **Files and categories (on Commons).** Reoa reads the edits made to the file's or category's page between
   the two crawls and finds the one whose diff adds or removes that category. A new file is credited to its upload.
   A renamed file or category is credited to the move log, and a deleted one to the deletion log. A file that left
   the tree because its whole category did is credited to that category's change.
-- **On-wiki usage (on the wiki that uses the file).** The tracker checks these sources in order, and the first one
+- **On-wiki usage (on the wiki that uses the file).** Reoa checks these sources in order, and the first one
   that explains the change is used:
   1. The edits of the page itself between the two usage checks, whose diff adds or removes the file's name.
   2. The edits, in that time, of the templates, modules and other pages the page includes (an infobox, a navbox, a
@@ -405,7 +409,7 @@ Copy `config.example.json` to `config.json` and fill in your own details. `confi
 - `RELIABILITY_PLAN.md`: what is planned so that every published number can be relied on and checked
 - `user_files.py`: one uploader's files in one category (the "Files by uploader" page and command line)
 - `report.py`: PDF reports (project and per contributor), from the dashboard's data and the saved data files
-- `install.py`: creates the shortcut, its icon (`korikath.ico`) and the scheduled tasks
+- `install.py`: creates the shortcut, its icon (`reoa.ico`, Reoa's mark; `logo.svg` is the logo) and the scheduled tasks
 - `dashboard_template.html`: dashboard page; data is embedded into `dashboard.html` at build time
 - `status.js`: live progress of a running crawl, read by the open dashboard
 - `uploads.json.gz`: cached upload date and uploader of every file; delete it to look them all up again
@@ -428,4 +432,4 @@ Copy `config.example.json` to `config.json` and fill in your own details. `confi
 
 ## Licence
 
-The code is released under the MIT License (see `LICENSE`). Reports the tracker produces are published under CC BY 4.0 by default, and images keep their own licences.
+The code is released under the MIT License (see `LICENSE`). Reports Reoa produces are published under CC BY 4.0 by default, and images keep their own licences.

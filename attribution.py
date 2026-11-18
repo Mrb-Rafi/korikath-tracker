@@ -1,4 +1,4 @@
-"""Who made each change: the user and the edit (with a diff link) behind every change the tracker reports.
+"""Who made each change: the user and the edit (with a diff link) behind every change Reoa reports.
 
 Crawl changes (on Commons):
   - a file added to, removed from or moved between the project's categories, a category added, moved or
@@ -22,7 +22,7 @@ On-wiki usage changes (on the wiki that uses the file):
 
 A match means the diff's added lines contain the name more often than its removed lines (for an addition), or
 the other way round (for a removal); names are compared without "File:"/"Category:", case-insensitively, with
-"_" read as a space. Requests are made one at a time with maxlag, like the rest of the tracker, and capped per
+"_" read as a space. Requests are made one at a time with maxlag, like the rest of Reoa, and capped per
 run; changes beyond the cap are marked "not looked up".
 
 Each result is a dict: {"user", "timestamp" (UTC), "comment", "url" (diff or log link), "how", "page"} or, when

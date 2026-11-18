@@ -1,4 +1,4 @@
-"""The methodology register: every definition, rule, threshold and known limitation the tracker counts by.
+"""The methodology register: every definition, rule, threshold and known limitation Reoa counts by.
 
 This is the single source for them. tracker.py, attribution.py and report.py import the constants from
 here, and the PDF report prints the definitions and limitations from here, so what the code does and what the

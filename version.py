@@ -1,4 +1,4 @@
-"""Version of the tracker's code, method and data formats, recorded in every data file, run and report.
+"""Version of Reoa's code, method and data formats, recorded in every data file, run and report.
 
 TOOL_VERSION follows semantic versioning: MAJOR when a data file format or a report changes incompatibly, MINOR when
 a metric or feature is added, PATCH for fixes. The method version (what is counted and how) lives in the methodology
@@ -16,7 +16,7 @@ from pathlib import Path
 
 import methodology
 
-TOOL_VERSION = "2.4.1"
+TOOL_VERSION = "2.5.0"
 BASE = Path(__file__).resolve().parent
 
 # Format version of each data file (bumped when its structure changes).
@@ -70,7 +70,7 @@ def describe():
     i = build_info()
     code = (f"commit {i['git_commit']}" + (" with uncommitted changes" if i["code_modified"] else "")
             if i["git_commit"] else "not under version control")
-    return f"Korikath Tracker {i['tool_version']} · method {i['method_version']} · {code}"
+    return f"Reoa {i['tool_version']} · method {i['method_version']} · {code}"
 
 
 if __name__ == "__main__":

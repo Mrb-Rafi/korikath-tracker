@@ -1,7 +1,28 @@
 # Changelog
 
-Every version of the tracker's code (tool version) and of what it counts (method version). Each entry says which
+Every version of Reoa's code (tool version) and of what it counts (method version). Each entry says which
 figures a change affects. Versions are recorded in every data file's metadata, every run record and every report.
+
+## Tool 2.5.0 · Method M2 · 2026-11-18
+
+**The tool is now called Reoa**, a Bangla word for a short yearly summary drawn from the ledger: income and
+spending, what is owed and what is due. It was called Korikath Tracker. Project Korikath, the Commons project it counts,
+keeps its name.
+
+- **Everywhere the tool names itself:** dashboard title and page titles, the "Built by" line, PDF reports ("Made
+  with Reoa ..."), `--version`, messages, help texts and documentation.
+- **Shortcut and scheduled tasks:** run `python install.py` once. It makes the **Reoa** shortcut and the
+  "Reoa (...)" tasks, and removes the old "Korikath Tracker" shortcuts and tasks.
+- **The name** is explained in the README, at the top of `tracker.py`, and on the dashboard (Activity → Data
+  status, and as the title's tooltip).
+- **Logo and icon:** a column of amounts in a ledger closed by a double rule, the bookkeeper's sign for a final
+  total. It is drawn on a 16 x 16 grid in black and white (defined once, in `brand.py`), and appears next to the
+  dashboard title, as the browser tab icon, at the top of the first page of every PDF report, as the shortcut
+  icon (`reoa.ico`, replacing the sunburst `korikath.ico`) and as `logo.svg` in the README.
+- **User agent** in `config.example.json`: `Reoa/1.0 (...)`.
+- Code file names (`tracker.py` etc.), data files, report IDs and PDF file names are unchanged.
+
+No figure changed.
 
 ## Tool 2.4.1 · Method M2 · 2026-11-09
 

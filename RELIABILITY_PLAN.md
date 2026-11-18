@@ -1,6 +1,6 @@
-# Korikath Tracker: reliability plan
+# Reoa: reliability plan
 
-**Purpose.** This document says what has to change in the Korikath Tracker, both its data files and its code, so
+**Purpose.** This document says what has to change in Reoa, both its data files and its code, so
 that every number it produces can be **relied on, checked and defended**. It also says how the PDF report must
 present and explain those guarantees. The PDF is the one document that goes to the public: donors, evaluators,
 project leadership, the Wikimedia community and the press.
@@ -126,7 +126,7 @@ withdrawn. If it has been shared, a correction should follow.
 
 **Do:**
 
-1. Turn the tracker folder into a git repository (`git init`). Add a `.gitignore` covering data files, `logs/`,
+1. Turn the Reoa folder into a git repository (`git init`). Add a `.gitignore` covering data files, `logs/`,
    `*.lock`, `status.js`, `views_status.js`, `dashboard.html`, `map_points.js`, `*.tmp` and `published/`. Code,
    the template, `config.json`, the README, this plan and tests stay under version control.
 2. Add `version.py` with:
@@ -427,7 +427,7 @@ fetched at print time.
 8. **Server endpoint** (`server.py` `/api/report.pdf`): keep the browser download, but the bundle is always written
    to `published/` first, so no report leaves the PC without a record.
 9. **PDF metadata:** set Title, Author (the issuer from config), Subject, Keywords (report ID, tool version, method
-   version) and Creator ("Korikath Tracker 2.0.0"). Chrome's print-to-PDF ignores most of this, so add a small
+   version) and Creator ("Reoa 2.0.0"). Chrome's print-to-PDF ignores most of this, so add a small
    post-processing step. A pure-Python PDF metadata writer, or `pypdf` if one dependency is acceptable, can do it.
    If staying standard-library-only, write an incremental-update Info dictionary; document the choice.
 
@@ -520,7 +520,7 @@ history is at 38% coverage comes out PROVISIONAL with the reason printed.
    - Daily figures beyond that cutoff are shown separately as "partial, recent days" and never added to the
      headline.
    - Print the cutoff, for example "File requests, January 2015 – September 2026".
-4. **Renamed files.** `mediarequests` is keyed by file name. When a file is renamed, the tracker refetches
+4. **Renamed files.** `mediarequests` is keyed by file name. When a file is renamed, Reoa refetches
    history under the new name, so requests made under the old name are lost. Do one of:
    - (a) also fetch history under previous names, from the move log, and add it up
    - (b) count the affected files and print them as a limitation (Appendix C, L7)
@@ -628,7 +628,7 @@ wherever k < N. Today these are missing:
    fine to cite with a link. Don't print thumbnails of deleted files. Keep titles only.
 8. **Wikimedia API etiquette.**
    - Set the `config.json` `user_agent` to include a real contact (an on-wiki user page or an email):
-     `KorikathTracker/2.0 (https://commons.wikimedia.org/wiki/User:<operator>; <email>)`.
+     `Reoa/2.0 (https://commons.wikimedia.org/wiki/User:<operator>; <email>)`.
    - Keep the current limits: maxlag, one request at a time, and under the AQS rate limit.
    - Record the User-Agent in run records.
 
@@ -720,7 +720,7 @@ dependency).
 1. Write structured logs (one JSON object per line) alongside the human logs: `logs/<job>.jsonl`, with UTC time,
    run ID, level and event.
 2. Every caught error that is skipped over is counted in the run record and leads to `complete: false` or a
-   coverage gap. The tracker already marks files that fail lookup as `None` ("don't ask again"). Mark them
+   coverage gap. Reoa already marks files that fail lookup as `None` ("don't ask again"). Mark them
    instead with a status and a retry count, and retry them in later runs, so a temporary failure doesn't
    permanently remove a file from coverage.
 3. Log rotation: keep 12 months.
@@ -962,7 +962,7 @@ have no provenance through this tool.
 | A11 | No author, title or metadata. No data fingerprint, method, limitations, licences or image credits. | whole document |
 
 **Recommendation:** withdraw it. If it reached anyone, send a one-paragraph correction: the figures were produced
-outside the tracker, contain errors, and will be replaced by a verified report.
+outside Reoa, contain errors, and will be replaced by a verified report.
 
 ---
 
@@ -972,7 +972,7 @@ outside the tracker, contain errors, and will be replaced by a verified report.
 
 > **How to rely on this report**
 >
-> **Where the numbers come from.** Every figure in this report was computed by the Korikath Tracker
+> **Where the numbers come from.** Every figure in this report was computed by Reoa
 > (version {tool_version}) from public data published by Wikimedia: the Wikimedia Commons API for files,
 > categories, uploaders, usage on other wikis and assessments, and the Wikimedia Analytics API for file requests.
 > No figure was typed in by hand, and no text in this report was written by hand or by an AI system. All text is

@@ -187,8 +187,8 @@ def run(D, now=None, live=True, config=None, sample_seed="0"):
         if age > MAX_PETSCAN_AGE:
             return None, f"last run {tracker.fmt_time(r['checked_at'])}, more than 35 days ago"
         diff = r["petscan_files"] - r["tracker_files"]
-        return diff == 0, (f"PetScan counted {r['petscan_files']:,} files on {tracker.fmt_time(r['checked_at'])}; the "
-                           f"tracker's crawl of that day: {r['tracker_files']:,}" + ("" if not diff else f" (difference {diff:+,})"))
+        return diff == 0, (f"PetScan counted {r['petscan_files']:,} files on {tracker.fmt_time(r['checked_at'])}; "
+                           f"Reoa's crawl of that day: {r['tracker_files']:,}" + ("" if not diff else f" (difference {diff:+,})"))
     C.run("W01", "warning", "Independent count (PetScan)", petscan)
 
     def spot():
@@ -233,7 +233,7 @@ def spot_check(full, seed, config):
 
 
 def petscan_run(config=None):
-    """Count the project's files with PetScan (an independent tool), and save the result next to the tracker's own
+    """Count the project's files with PetScan (an independent tool), and save the result next to Reoa's own
     count from its latest crawl."""
     config = config or tracker.load_json(BASE / "config.json", {})
     root = tracker.normalize_category(config["root_category"]).split(":", 1)[1]
@@ -261,7 +261,7 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     if "--petscan" in sys.argv:
         r, path = petscan_run()
-        print(f"PetScan: {r['petscan_files']:,} files; tracker's latest crawl: {r['tracker_files']:,}. Saved {path.name}")
+        print(f"PetScan: {r['petscan_files']:,} files; Reoa's latest crawl: {r['tracker_files']:,}. Saved {path.name}")
         return
     items = run(tracker.build_payload(write=False))
     for c in items:

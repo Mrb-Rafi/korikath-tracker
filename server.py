@@ -1,4 +1,4 @@
-"""Small local web server for the dashboard (started by the Korikath Tracker shortcut).
+"""Small local web server for the dashboard (started by the Reoa shortcut).
 
 A page opened straight from disk can't start programs, so the dashboard is served from
 here instead, and its "Start quick check" / "Start full crawl" buttons ask this server to
@@ -29,7 +29,7 @@ import user_files  # noqa: E402
 PORT = 8777
 URL = f"http://127.0.0.1:{PORT}/"
 IDLE_MINUTES = 30
-TASK_PREFIX = "Korikath Tracker"
+TASK_PREFIX = "Reoa"
 NO_WINDOW = 0x08000000  # CREATE_NO_WINDOW: don't flash a console for helper processes
 DETACHED = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP: crawl outlives the server
 STATIC = {"/": ("dashboard.html", "text/html; charset=utf-8"),
@@ -37,7 +37,7 @@ STATIC = {"/": ("dashboard.html", "text/html; charset=utf-8"),
           "/status.js": ("status.js", "text/javascript; charset=utf-8"),
           "/map_points.js": ("map_points.js", "text/javascript; charset=utf-8"),
           "/views_status.js": ("views_status.js", "text/javascript; charset=utf-8"),
-          "/favicon.ico": ("korikath.ico", "image/x-icon"),
+          "/favicon.ico": ("reoa.ico", "image/x-icon"),
           "/usage_log.csv": ("usage_log.csv", "text/csv; charset=utf-8"),
           "/usage_current.csv": ("usage_current.csv", "text/csv; charset=utf-8"),
           "/removed_files.csv": ("removed_files.csv", "text/csv; charset=utf-8")}
@@ -109,7 +109,7 @@ class Handler(BaseHTTPRequestHandler):
         last_request = time.monotonic()
         path = self.path.split("?", 1)[0]
         if path == "/api/ping":
-            return self.send(200, {"app": "korikath-tracker"})
+            return self.send(200, {"app": "reoa"})
         if path == "/api/info":
             return self.send(200, {"running": tracker.crawl_running(), "schedule": scheduled_tasks()})
         if path == "/api/report.pdf":
@@ -178,7 +178,7 @@ class Handler(BaseHTTPRequestHandler):
         last_request = time.monotonic()
         # The custom header can't be sent by another website without a CORS preflight, which this
         # server never approves, so only the dashboard itself can start crawls.
-        if self.headers.get("X-Korikath") != "1":
+        if self.headers.get("X-Reoa") != "1":
             return self.send(403, {"error": "forbidden"})
         path = self.path.split("?", 1)[0]
         if path in ("/api/crawl/quick", "/api/crawl/full", "/api/crawl/usage"):
@@ -192,7 +192,7 @@ class Handler(BaseHTTPRequestHandler):
 def already_running():
     try:
         with urllib.request.urlopen(URL + "api/ping", timeout=2) as r:
-            return json.load(r).get("app") == "korikath-tracker"
+            return json.load(r).get("app") == "reoa"
     except Exception:
         return False
 

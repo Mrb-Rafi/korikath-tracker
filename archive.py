@@ -1,4 +1,4 @@
-"""Archive of every state of the tracker's data, so nothing a number was computed from is ever lost.
+"""Archive of every state of Reoa's data, so nothing a number was computed from is ever lost.
 
 Most data files (usage, views, assessments, locations, camera data, upload dates, ...) are overwritten in place
 by each job. After every job, this module records the exact state of all data files, the code and the logs:
@@ -20,7 +20,7 @@ Standard library only. Usage:
                                                or "latest") into an empty FOLDER, checking every hash
     python archive.py verify                   check the register chain, every state and every object
     python archive.py find FILE                which state(s) recorded this exact file; for a PDF report, whether
-                                               the tracker issued it (by its SHA-256; PDFs themselves aren't kept)
+                                               Reoa issued it (by its SHA-256; PDFs themselves aren't kept)
 """
 
 import argparse
@@ -158,7 +158,7 @@ def register_lines():
 
 def record_state(job, status="ok", error=None, extra=None, include_dashboard=False, extra_files=None):
     """Store every tracked file and write a state + register line. extra_files: {name in state: path}
-    for files kept outside the tracker folder (e.g. a PDF report). Returns the state's file name."""
+    for files kept outside the Reoa folder (e.g. a PDF report). Returns the state's file name."""
     with _Lock():
         files, new_objects, new_bytes = {}, 0, 0
         sources = {rel: p for rel, p in tracked_files(include_dashboard).items()}
@@ -249,7 +249,7 @@ def restore(ref, folder):
     state = json.loads(path.read_text(encoding="utf-8"))
     out = Path(folder).resolve()
     if out == BASE:
-        raise SystemExit("Restore into a separate, empty folder, not into the tracker's own folder.")
+        raise SystemExit("Restore into a separate, empty folder, not into Reoa's own folder.")
     if out.exists() and any(out.iterdir()):
         raise SystemExit(f"{out} is not empty.")
     for rel, f in state["files"].items():

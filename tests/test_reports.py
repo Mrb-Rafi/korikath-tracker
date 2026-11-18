@@ -1,7 +1,7 @@
 """Tests of Phase 3: issued reports (IDs, register, verification, corrections), checks, wording, credits, privacy.
 
     python -m unittest discover -s tests
-    set KORIKATH_SLOW_TESTS=1 to also make a real PDF and rebuild it from its archive state (about a minute)
+    set REOA_SLOW_TESTS=1 to also make a real PDF and rebuild it from its archive state (about a minute)
 """
 
 import json
@@ -172,7 +172,7 @@ class PrivacyTests(unittest.TestCase):
             self.assertEqual(report.shown("Other"), "Other")
 
 
-@unittest.skipUnless(os.environ.get("KORIKATH_SLOW_TESTS"), "set KORIKATH_SLOW_TESTS=1 to run")
+@unittest.skipUnless(os.environ.get("REOA_SLOW_TESTS"), "set REOA_SLOW_TESTS=1 to run")
 class EndToEndTests(unittest.TestCase):
     def test_issue_then_rebuild_identically(self):
         with tempfile.TemporaryDirectory() as tmp:

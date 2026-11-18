@@ -1,4 +1,7 @@
-"""Project Korikath category tracker.
+"""Reoa: Project Korikath category tracker.
+
+Reoa is a Bangla word for a short yearly summary drawn from the ledger: income and spending, what is owed and what is due.
+
 
 Each run crawls the whole category tree under the project's mother category on
 Wikimedia Commons, counts the unique files in it (the same way PetScan does:
@@ -58,7 +61,7 @@ MEDIATYPES_FILE = BASE / "mediatypes.json"  # page id -> Commons media type, for
 UPLOADS_FILE = BASE / "uploads.json.gz"  # page id -> [original upload time, uploader], fetched once per file
 REPORTS_IN_DASHBOARD = 30
 
-UTC = timezone.utc  # every time the tracker stores or shows is UTC
+UTC = timezone.utc  # every time Reoa stores or shows is UTC
 
 # Every definition, rule and threshold lives in the methodology register (methodology.py).
 from methodology import (  # noqa: E402

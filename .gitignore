@@ -1,5 +1,5 @@
 # Only the code, its documentation and the method register are version-controlled.
-# Data is kept, fingerprinted and archived by the tracker itself (archive.py, provenance.py).
+# Data is kept, fingerprinted and archived by Reoa itself (archive.py, provenance.py).
 
 # Data files and their metadata
 *.json.gz
@@ -29,7 +29,7 @@ pdftest/
 # Local settings (contact details in the User-Agent)
 config.json
 
-# Issued-report register and validation results: data, archived and backed up by the tracker itself
+# Issued-report register and validation results: data, archived and backed up by Reoa itself
 published/
 validation/
 png/

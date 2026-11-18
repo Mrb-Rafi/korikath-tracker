@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Korikath Tracker</title>
+<title>Reoa</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16'/%3E%3Cg fill='%23fff'%3E%3Crect x='8' y='3' width='5' height='1'/%3E%3Crect x='10' y='5' width='3' height='1'/%3E%3Crect x='6' y='7' width='7' height='1'/%3E%3Crect x='3' y='10' width='10' height='1'/%3E%3Crect x='3' y='12' width='10' height='1'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap">
 <style>
   /* Swiss Mono: black, white and greys only. Emphasis comes from weight, size, rules and solid fills, never colour.
@@ -270,6 +271,8 @@
   a { color: var(--text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
   a:hover { text-decoration-thickness: 2px; }
   h1 { font-size: 36px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.02em; line-height: .95; }
+  h1.brand { display: flex; align-items: center; gap: .28em; }
+  h1.brand .mark { width: .95em; height: .95em; flex: none; }
   header .sub { text-transform: uppercase; letter-spacing: .06em; font-size: 11.5px; margin-top: 8px; }
   h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
   h3 { font-weight: 700; }
@@ -334,7 +337,7 @@
 <div class="wrap">
   <header>
     <div>
-      <h1 id="title">Project Korikath tracker</h1>
+      <h1 id="title" class="brand" title="Reoa is a Bangla word for a short yearly summary drawn from the ledger: income and spending, what is owed and what is due."><svg class="mark" viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" fill="currentColor"/><g fill="var(--bg)"><rect x="8" y="3" width="5" height="1"/><rect x="10" y="5" width="3" height="1"/><rect x="6" y="7" width="7" height="1"/><rect x="3" y="10" width="10" height="1"/><rect x="3" y="12" width="10" height="1"/></g></svg>Reoa</h1>
       <div class="sub" id="subtitle"></div>
     </div>
     <div class="report-dl" id="projectReport">
@@ -416,7 +419,7 @@
       <aside class="sb-info" id="sbInfo"></aside>
     </div>
     <p class="sub" id="sbHelp" style="margin:12px 0 0">The mother category is in the centre and each ring is one level deeper. Click a slice to zoom into
-      that cluster; click the centre to go back up. Each slice is drawn under the category the tracker found it through first;
+      that cluster; click the centre to go back up. Each slice is drawn under the category Reoa found it through first;
       a category or file filed in several places is counted in each, so slice sizes can add up to more than the unique total.</p>
     </div>
     <div role="tabpanel" id="panel-diagram" aria-labelledby="tab-diagram" hidden>
@@ -689,6 +692,7 @@
         crawl. A figure built on data that doesn't cover every file says so where it is shown. All times UTC.</p>
       <div class="scroll"><table id="dataStatus"></table></div>
       <p class="sub" id="buildInfo" style="margin-top:8px"></p>
+      <p class="sub">Reoa is a Bangla word for a short yearly summary drawn from the ledger: income and spending, what is owed and what is due. Reoa keeps that kind of account for Project Korikath's media.</p>
     </section>
     <section>
       <h2>Saved crawls <span class="count" id="savedCount"></span></h2>
@@ -776,7 +780,6 @@ function render() {
     return;
   }
   const snap = DATA.snapshot, hist = DATA.history || [], reports = DATA.reports || [];
-  $("title").textContent = short(snap.root) + " tracker";
   $("subtitle").innerHTML = `${link(snap.root)} · last crawl ${when(snap.taken_at)}`;
   renderHome(snap, reports[reports.length - 1]);
   renderGrowth(DATA.growth, snap);
@@ -1220,7 +1223,7 @@ function renderContributors(C, snap) {
     kpi("Median per uploader", fmt(median), null, false, median === 1 ? "file" : "files");
 
   // Uploaders over time
-  const firstMonth = (u) => Object.keys(u[6]).sort()[0];  // months are "YYYY-MM" in UTC, from the tracker
+  const firstMonth = (u) => Object.keys(u[6]).sort()[0];  // months are "YYYY-MM" in UTC, from Reoa
   const allMonths = [...new Set(U.flatMap(u => Object.keys(u[6])))].sort();
   const months = [];
   if (allMonths.length) {
@@ -2330,7 +2333,7 @@ function renderDataStatus() {
         <td class="num">${r.share == null ? "—" : `<span class="${full ? "" : "cause bad"}">${pct1(r.covered, r.of)}</span>`}</td>
         <td class="sub">${esc(r.note || "")}</td></tr>`;
     }).join("");
-  $("buildInfo").textContent = b ? `Built by Korikath Tracker ${b.tool_version}, method ${b.method_version}` +
+  $("buildInfo").textContent = b ? `Built by Reoa ${b.tool_version}, method ${b.method_version}` +
     (b.git_commit ? `, code commit ${b.git_commit}${b.code_modified ? " (with uncommitted changes)" : ""}` : ", code not under version control") +
     `, on ${when(DATA.generated_at)}.` : "";
 }
@@ -2689,7 +2692,7 @@ function renderDendro(snap) {
 }
 
 // ---- Crawl buttons and schedule. These need the local server (server.py, started by the
-// Korikath Tracker shortcut); a page opened straight from disk can't start programs.
+// Reoa shortcut); a page opened straight from disk can't start programs.
 const SERVED = location.protocol.startsWith("http");
 const isRunning = () => {
   const s = window.TRACKER_STATUS;
@@ -2700,24 +2703,24 @@ function updateButtons() {
   for (const id of ["startQuick", "startFull", "startUsage"]) {
     const b = $(id);
     b.disabled = !SERVED || busy;
-    b.title = !SERVED ? "Open the dashboard with the Korikath Tracker shortcut to start crawls" : busy ? "A crawl is already running" : "";
+    b.title = !SERVED ? "Open the dashboard with the Reoa shortcut to start crawls" : busy ? "A crawl is already running" : "";
   }
 }
 async function startCrawl(mode) {
   $("crawlMsg").textContent = "";
   try {
-    const r = await fetch(`/api/crawl/${mode}`, {method: "POST", headers: {"X-Korikath": "1"}});
+    const r = await fetch(`/api/crawl/${mode}`, {method: "POST", headers: {"X-Reoa": "1"}});
     if (r.status === 409) $("crawlMsg").textContent = "A crawl is already running. Wait for it to finish.";
     else if (!r.ok) $("crawlMsg").textContent = "Couldn't start the crawl (server answered " + r.status + ").";
   } catch (e) {
-    $("crawlMsg").textContent = "Couldn't reach the tracker. Close this tab and open the Korikath Tracker shortcut again.";
+    $("crawlMsg").textContent = "Couldn't reach Reoa. Close this tab and open the Reoa shortcut again.";
   }
   pollStatus();
 }
 async function loadSchedule() {
   const el = $("schedule");
   if (!SERVED) {
-    el.innerHTML = "Open the dashboard with the <b>Korikath Tracker</b> shortcut to see the schedule and start crawls.";
+    el.innerHTML = "Open the dashboard with the <b>Reoa</b> shortcut to see the schedule and start crawls.";
     return;
   }
   try {
@@ -2744,7 +2747,7 @@ document.addEventListener("click", async (e) => {
   if (!b) return;
   const msg = b.parentNode.querySelector(".report-msg");
   if (!SERVED) {
-    msg.textContent = "Open the dashboard with the Korikath Tracker shortcut to download PDF reports.";
+    msg.textContent = "Open the dashboard with the Reoa shortcut to download PDF reports.";
     return;
   }
   const label = b.textContent;
@@ -2766,7 +2769,7 @@ document.addEventListener("click", async (e) => {
     setTimeout(() => URL.revokeObjectURL(a.href), 60000);
   } catch (err) {
     msg.textContent = err instanceof TypeError
-      ? "Couldn't reach the tracker. Close this tab and open the Korikath Tracker shortcut again."
+      ? "Couldn't reach Reoa. Close this tab and open the Reoa shortcut again."
       : "Couldn't make the report: " + err.message;
   } finally {
     b.disabled = false;
@@ -2963,7 +2966,7 @@ async function showUserFiles(q, force) {
   if (key === ufLast && !force) return;
   ufLast = key;
   if (!SERVED) {
-    out.innerHTML = `<div class="notice">Open the dashboard with the Korikath Tracker shortcut to look up files.</div>`;
+    out.innerHTML = `<div class="notice">Open the dashboard with the Reoa shortcut to look up files.</div>`;
     return;
   }
   out.innerHTML = `<div class="notice">Looking up…</div>`;
@@ -2976,7 +2979,7 @@ async function showUserFiles(q, force) {
     if (key !== ufLast) return;
     ufLast = null;
     out.innerHTML = `<div class="notice">${err instanceof TypeError
-      ? "Couldn't reach the tracker. Close this tab and open the Korikath Tracker shortcut again."
+      ? "Couldn't reach Reoa. Close this tab and open the Reoa shortcut again."
       : esc(err.message)}</div>`;
     return;
   }
@@ -3032,8 +3035,8 @@ setupUserFiles();
 // ---- Pages: #/ (overview), #/collection, #/reach, #/uploaders, #/activity. A second part jumps to a section
 // (#/activity/crawls); #/uploaders?u=Name opens one uploader; #/uploaders/files?c=...&u=... a category's files.
 // They're views of this one page, so Back works.
-const PAGE_TITLES = {home: "Overview · Korikath Tracker", collection: "Collection · Korikath Tracker",
-  reach: "Reach · Korikath Tracker", uploaders: "Uploaders · Korikath Tracker", activity: "Activity · Korikath Tracker"};
+const PAGE_TITLES = {home: "Overview · Reoa", collection: "Collection · Reoa",
+  reach: "Reach · Reoa", uploaders: "Uploaders · Reoa", activity: "Activity · Reoa"};
 const SECTIONS = {collection: {growth: "sec-growth", tree: "sec-tree", map: "sec-map"},
   reach: {usage: "sec-usage", "file-requests": "sec-requests"},
   uploaders: {files: "sec-files"}, activity: {changes: "sec-changes", "usage-changes": "sec-usage-changes", crawls: "sec-crawls"}};

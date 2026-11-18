@@ -1,6 +1,6 @@
 """Tests of Phase 2: view totals to a common cutoff, coverage, retries and refreshes, reports read the data files.
 
-    python -m unittest discover -s tests       (from the tracker folder)
+    python -m unittest discover -s tests       (from the Reoa folder)
 """
 
 import sys

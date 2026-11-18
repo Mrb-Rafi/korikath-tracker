@@ -11,7 +11,7 @@ No PDF is stored. What makes a report checkable is kept instead, at almost no co
     before it, so a later edit or deletion of an entry is detectable. published/register.csv is the same list,
     readable, for publishing.
 
-    python report.py --verify FILE.pdf                     was this PDF issued by the tracker? its status?
+    python report.py --verify FILE.pdf                     was this PDF issued by Reoa? its status?
     python report.py --rebuild REPORT_ID                   regenerate the report from its archive state and
                                                            check its figures and page match what was issued
     python report.py --supersede OLD_ID --by NEW_ID --reason "..."   record a correction
@@ -149,8 +149,8 @@ def verify_pdf(path):
     if problems:
         out += ["WARNING: the register itself fails its integrity check:"] + [f"  {p}" for p in problems]
     if not match:
-        out.append("NOT ISSUED: no report in the register has this fingerprint. The file was not produced by the "
-                   "tracker, or it was changed after it was issued.")
+        out.append("NOT ISSUED: no report in the register has this fingerprint. The file was not produced by "
+                   "Reoa, or it was changed after it was issued.")
         return False, out
     e = match[0]
     _, sup = state_of(e["report_id"])

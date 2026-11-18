@@ -9,7 +9,7 @@ licences of the images shown, and the browser loading those thumbnails.
 
     python report.py                       project report, saved in your Downloads folder
     python report.py --user "Name"         one uploader's report
-    python report.py --verify FILE.pdf     was this PDF issued by the tracker, and what is its status?
+    python report.py --verify FILE.pdf     was this PDF issued by Reoa, and what is its status?
     python report.py --rebuild REPORT_ID   regenerate an issued report from its archive state and compare
     python report.py --register            list issued reports
     python report.py --supersede OLD_ID --by NEW_ID --reason "..."   record a correction
@@ -35,6 +35,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE))
 import tracker  # noqa: E402
+import brand  # noqa: E402
 from tracker import UTC, fmt_time  # noqa: E402
 
 
@@ -326,6 +327,9 @@ body { margin: 0; color: #000000; font: 9.5pt/1.45 'Archivo', 'Helvetica Neue', 
   -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 a { color: #000000; text-decoration: underline; text-decoration-thickness: .5pt; text-underline-offset: 1.5pt; }
 header { border-bottom: 3pt solid #000000; padding-bottom: 10px; margin-bottom: 14px; }
+header .brand { display: flex; align-items: center; gap: 5pt; margin-bottom: 8px; font-weight: 800; font-size: 11pt;
+  letter-spacing: .02em; line-height: 1; }
+header .brand .mark { width: 13pt; height: 13pt; flex: none; }
 header .kicker { color: #000000; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 7.5pt; }
 h1 { font-size: 26pt; font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em; margin: 4px 0 10px; line-height: 1; }
 h2, h3 { break-after: avoid; }
@@ -388,11 +392,14 @@ h3.removed { text-decoration: underline; text-decoration-thickness: 1.5pt; }
 """
 
 
+BRAND = f'<div class="brand">{brand.mark_svg()}<span>REOA</span></div>'  # Reoa's logo, top of the first page
+
+
 def page(title, kicker, meta_rows, body, manifest=None):
     if manifest is None:  # a page without an issued report (only used by tests)
         meta = "".join(f"<b>{esc(k)}</b><span>{v}</span>" for k, v in meta_rows)
         return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{esc(title)}</title>'
-                f"{FONT_LINK}<style>{CSS}</style></head><body><header><div class=kicker>{esc(kicker)}</div><h1>{esc(title)}</h1>"
+                f"{FONT_LINK}<style>{CSS}</style></head><body><header>{BRAND}<div class=kicker>{esc(kicker)}</div><h1>{esc(title)}</h1>"
                 f'<div class="meta">{meta}</div></header>{body}</body></html>')
     m = manifest
     css = CSS.replace('content: "Project Korikath statistics"', f'content: "{m["report_id"]} · {m["status"]}"')
@@ -400,7 +407,7 @@ def page(title, kicker, meta_rows, body, manifest=None):
     return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{esc(title)} · {esc(m["report_id"])}</title>'
             f'<meta name="author" content="{esc((m.get("issuer") or {}).get("name") or "Project Korikath")}">'
             f'<meta name="description" content="{esc(m["report_id"])} {esc(m["status"])} {esc(m["fingerprint"])}">'
-            f"{FONT_LINK}<style>{css}</style></head><body>{mark}<header><div class=kicker>{esc(kicker)}</div><h1>{esc(title)}</h1>"
+            f"{FONT_LINK}<style>{css}</style></head><body>{mark}<header>{BRAND}<div class=kicker>{esc(kicker)}</div><h1>{esc(title)}</h1>"
             f"{cover(m, meta_rows)}</header>{trust_section(m)}{checks_section(m)}"
             f"{body}{appendices(m, RENDER['data'])}</body></html>")
 
@@ -484,7 +491,7 @@ def project_report(D, generated, manifest=None):
              for r in D["data_status"]], num=(2, 3)),
             "Each kind of data was collected at its own time. Where a dataset does not cover every file of the crawl, "
             "the figures built on it are based on the files it covers."
-            + (f" Built by Korikath Tracker {esc(D['build']['tool_version'])}, method {esc(D['build']['method_version'])}"
+            + (f" Built by Reoa {esc(D['build']['tool_version'])}, method {esc(D['build']['method_version'])}"
                + (f", code commit {esc(D['build']['git_commit'])}" if D['build'].get('git_commit') else "") + "."
                if D.get("build") else "")))
 
@@ -1030,7 +1037,7 @@ GLOSSARY = [
     ("Wikimedia Commons", "The Wikimedia project that hosts freely licensed media files used by Wikipedia and other wikis."),
     ("Category tree", "The category Category:Project Korikath and every category below it, at any depth."),
     ("Page ID", "Commons' permanent number for a page. It stays the same when a file is renamed, so files are matched by it."),
-    ("Crawl", "One complete reading of the category tree by the tracker. A full crawl re-reads every category; a quick check "
+    ("Crawl", "One complete reading of the category tree by Reoa. A full crawl re-reads every category; a quick check "
               "re-reads only what changed (limitation L02)."),
     ("Snapshot", "The saved result of one crawl: every category and every file in the tree at that time."),
     ("On-wiki usage", "A file being shown on a page of another Wikimedia wiki, as recorded by that wiki (GlobalUsage)."),
@@ -1045,7 +1052,7 @@ GLOSSARY = [
     ("EXIF", "Camera metadata stored inside an image file: device, time taken, sometimes GPS position."),
     ("SHA-256 fingerprint", "A 64-character code computed from the exact bytes of a file or record. Any change, however "
                             "small, gives a completely different fingerprint."),
-    ("Archive state", "A record of every data file and code file of the tracker at one moment, each identified by its "
+    ("Archive state", "A record of every data file and code file of Reoa at one moment, each identified by its "
                       "SHA-256 fingerprint and stored once."),
     ("FINAL / PROVISIONAL", "FINAL: every error and freshness check passed. PROVISIONAL: at least one did not; the reasons are on "
                             "the cover. Only FINAL reports are meant to be cited."),
@@ -1111,9 +1118,9 @@ def cover(manifest, meta_rows):
             ("Issued by", esc(", ".join(x for x in (issuer.get("name"), issuer.get("role"), issuer.get("contact")) if x)
                               or "not named (config.json: issuer)"))]
     rows += meta_rows
-    rows += [("Made with", f"Korikath Tracker {esc(m['build']['tool_version'])}, method {esc(m['build']['method_version'])}"
+    rows += [("Made with", f"Reoa {esc(m['build']['tool_version'])}, method {esc(m['build']['method_version'])}"
                            + (f", code commit {esc(m['build']['git_commit'])}" if m["build"].get("git_commit") else "")),
-             ("Verify", "This PDF's SHA-256 fingerprint is recorded in the tracker's register of issued reports"
+             ("Verify", "This PDF's SHA-256 fingerprint is recorded in Reoa's register of issued reports"
                         + (f", published at <a href=\"{esc(m['register_url'])}\">{esc(m['register_url'])}</a>" if m.get("register_url") else "")
                         + ". Appendix H explains how to check it."),
              ("Times", "All times in this report are UTC (Coordinated Universal Time).")]
@@ -1133,23 +1140,23 @@ def trust_section(m):
     lic = esc(m.get("licence") or "CC BY 4.0")
     p = [
         ("Where the numbers come from",
-         "Every figure in this report was computed by the Korikath Tracker from public data published by Wikimedia: the "
+         "Every figure in this report was computed by Reoa from public data published by Wikimedia: the "
          "Wikimedia Commons API (files, categories, uploaders, usage on other wikis, assessments, file metadata) and the "
          "Wikimedia Analytics API (file requests). No figure was typed in by hand. All text comes from fixed templates in "
-         "the tracker's code, filled in with the figures; nothing is written or edited by hand for an individual report."),
+         "Reoa's code, filled in with the figures; nothing is written or edited by hand for an individual report."),
         ("A fixed point in time",
          "Commons changes every minute. This report describes the project as it was at the times in the table "
          "\"Data used in this report\": each kind of data was collected at its own time, and the table says when and how "
          "completely. Later changes are not included."),
         ("Can it be reproduced?",
-         f"Yes. Just before this report was made, the tracker recorded every data file and every code file it used "
+         f"Yes. Just before this report was made, Reoa recorded every data file and every code file it used "
          f"(archive state {esc(m['archive_state'])}, fingerprint {esc(m['archive_state_sha256'][:16])}…). "
          "From that record the whole report can be regenerated at any time and compared, figure by figure, with this "
-         "one (the tracker's --rebuild command does this). Running the same queries against Wikimedia today would give "
+         "one (Reoa's --rebuild command does this). Running the same queries against Wikimedia today would give "
          "slightly different numbers, because the wikis have changed since; that is why the data is kept."),
         ("Has it been altered?",
          f"This report's fingerprint is {esc(m['fingerprint'][:16])}…, computed from its data, figures, checks and "
-         "versions. The PDF file's own SHA-256 fingerprint is recorded in the tracker's register of issued reports, a "
+         "versions. The PDF file's own SHA-256 fingerprint is recorded in Reoa's register of issued reports, a "
          "list in which every entry is chained to the one before it, so entries can't be changed or removed unnoticed. "
          "If a copy's fingerprint is not in the register, it is not an issued report (appendix H)."),
         ("What exactly is counted",
@@ -1160,7 +1167,7 @@ def trust_section(m):
          "Where a figure does not cover every file of the project, it says so, and each section ends with a line naming "
          "the data it rests on, as of when, and the definitions that apply."),
         ("How it was checked",
-         f"Before this report was issued, the tracker ran {len(checks)} checks ({passed} passed; section 2): totals add up, "
+         f"Before this report was issued, Reoa ran {len(checks)} checks ({passed} passed; section 2): totals add up, "
          "every data file matches its recorded fingerprint, the rules match the recorded method version, the archive "
          "is intact, the data is recent and complete"
          + (f"; {esc(spot['detail'])} in a live spot check" if spot and spot["result"] == "passed" else "")
@@ -1168,7 +1175,7 @@ def trust_section(m):
          + f". The status is <b>{m['status']}</b>" + (": every error and freshness check passed." if m["status"] == "FINAL"
                                                        else ": see the reasons on the cover.")),
         ("What it cannot tell you",
-         "Some things are inferred or not visible to the tracker. For example, file requests include thumbnails and "
+         "Some things are inferred or not visible to Reoa. For example, file requests include thumbnails and "
          "cannot fully separate people from automated traffic, and the uploader of a file is not always the person who "
          "took the photo. Appendix C lists every known limitation."),
         ("Licences and privacy",
@@ -1198,7 +1205,7 @@ def appendices(m, D):
     out = []
     # A. Methods
     meth = [
-        "The tracker reads the category tree below Category:Project Korikath on Wikimedia Commons at unlimited depth, "
+        "Reoa reads the category tree below Category:Project Korikath on Wikimedia Commons at unlimited depth, "
         "and counts each file once by its page ID (definition D01). A full crawl re-reads every category; a quick check "
         "reads Commons' category counters and re-reads in full every category whose counts don't add up (limitation L02).",
         "Each crawl is saved as a snapshot and compared with the previous one; differences are matched by page ID, and "
@@ -1207,10 +1214,10 @@ def appendices(m, D):
         f"on a rolling basis (each day 1/{methodology.ROTATION_DAYS} of the files, so every file once a month). On-wiki usage and assessments are "
         "checked after every crawl. File requests are collected per file from Wikimedia's media request statistics and "
         "totalled to a common cutoff month (D12).",
-        "All figures in this report are computed from those saved data files by the tracker's code at the version on the "
+        "All figures in this report are computed from those saved data files by Reoa's code at the version on the "
         "cover; the same code and data regenerate them exactly.",
         "Every data file carries a record of where it came from, when, how complete it is and its fingerprint; every run "
-        "of the tracker is recorded; every state of the data is archived.",
+        "of Reoa is recorded; every state of the data is archived.",
     ]
     out.append(section("Appendix A. How this report was made", "".join(f"<p>{esc(x)}</p>" for x in meth)))
     # B. Definitions
@@ -1232,7 +1239,7 @@ def appendices(m, D):
     srcs = [[esc(name), esc(src)] for _p, name, src, _d in provenance.DATASETS]
     out.append(section("Appendix D. Provenance", f"<p>Archive state <b>{esc(m['archive_state'])}</b>, SHA-256 "
         f'<span class="mono">{esc(m["archive_state_sha256"])}</span>. Figures fingerprint <span class="mono">'
-        f'{esc(m["figures_sha256"])}</span>. Code: Korikath Tracker {esc(m["build"]["tool_version"])}, commit '
+        f'{esc(m["figures_sha256"])}</span>. Code: Reoa {esc(m["build"]["tool_version"])}, commit '
         f'{esc(m["build"].get("git_commit") or "—")}, Python {esc(m["build"]["python"])}. Requests to Wikimedia were sent '
         f'one at a time, identified as: {esc(m.get("user_agent") or "")}.</p>'
         + "<h3>Data files used</h3>" + table(["File", "SHA-256 (first 16 characters)"], rows)
@@ -1244,7 +1251,7 @@ def appendices(m, D):
     out.append(section("Appendix E. Method versions and corrections",
         table(["Method version", "Since", "Fingerprint of its rules"],
               [[esc(k), esc(v["date"]), f'<span class="mono">{esc(v["fingerprint"][:16])}…</span>'] for k, v in versions.items()])
-        + "<p>Each version's changes, and which figures they affect, are described in the tracker's CHANGELOG.md.</p>"
+        + "<p>Each version's changes, and which figures they affect, are described in Reoa's CHANGELOG.md.</p>"
         + "<h3>Corrections to earlier reports</h3>"
         + (table(["Report", "Replaced by", "Reason"], [[esc(e["report_id"]), esc(e["superseded_by"]), esc(e["reason"])] for e in errata])
            if errata else "<p>None.</p>")))
@@ -1471,7 +1478,7 @@ def main():
     ap = argparse.ArgumentParser(description="Make a PDF statistics report of Project Korikath.")
     ap.add_argument("--user", help="an uploader's report instead of the whole project")
     ap.add_argument("--out", default=str(OUT_DIR), help="folder to save the PDF in")
-    ap.add_argument("--verify", metavar="PDF", help="was this PDF issued by the tracker? its status?")
+    ap.add_argument("--verify", metavar="PDF", help="was this PDF issued by Reoa? its status?")
     ap.add_argument("--rebuild", metavar="REPORT_ID", help="regenerate an issued report from its archive state and compare")
     ap.add_argument("--register", action="store_true", help="list issued reports")
     ap.add_argument("--supersede", metavar="OLD_ID", help="record that a report was replaced by a corrected one")
