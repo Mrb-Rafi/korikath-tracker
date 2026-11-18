@@ -1,6 +1,6 @@
 # Reoa
 
-<img src="logo.svg" alt="Reoa" width="240">
+<img src="logo.svg" alt="Reoa" width="255">
 
 **The name.** Reoa is a Bangla word for a short yearly summary drawn from the ledger: income and spending, what is owed and what is due. Reoa keeps that kind of account for Project Korikath's media.
 
